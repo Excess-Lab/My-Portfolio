@@ -1,0 +1,82 @@
+@import 'tailwindcss';
+
+/* Дизайн свёрстан в PT Astra Serif. Она не раздаётся с CDN, поэтому пока
+   подключена PT Serif (тот же исходник, поддерживает кириллицу и сербский).
+   Чтобы поставить настоящую: положи файлы в public/fonts/ и раскомментируй
+   @font-face ниже — остальной код трогать не нужно, всё завязано на var(--font-serif). */
+/*
+@font-face {
+  font-family: 'PT Astra Serif';
+  src: url('/fonts/PTAstraSerif-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PT Astra Serif';
+  src: url('/fonts/PTAstraSerif-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'PT Astra Serif';
+  src: url('/fonts/PTAstraSerif-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+*/
+
+@theme {
+  --font-serif: 'PT Astra Serif', 'PT Serif', Georgia, 'Times New Roman', serif;
+  --color-canvas: #e7e7e7;
+  --color-ink: #000000;
+  --color-paper: #ffffff;
+}
+
+:root {
+  /* Сцена = кадр с фотографией (1086×1080 в макете). Всё внутри позиционируется
+     в процентах от неё, поэтому постер держится в руках на любом экране. */
+  --stage-ratio: 1.005556;
+  /* По высоте экрана, но не шире полутора ширин вьюпорта: на десктопе кадр
+     занимает всю высоту, на узком экране обрезается максимум на четверть с
+     каждой стороны — постер и хлястик остаются в зоне досягаемости пальца. */
+  --stage-w: min(calc(100svh * var(--stage-ratio)), 150vw);
+  --stage-h: calc(var(--stage-w) / var(--stage-ratio));
+  /* Базовая единица типографики: 30px при высоте кадра 1080px. */
+  --tx: calc(var(--stage-h) / 1080);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-serif);
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Хлястик тянут пальцем — браузер не должен параллельно скроллить страницу. */
+[data-drag-handle] {
+  touch-action: none;
+  cursor: grab;
+}
+
+[data-drag-handle]:active {
+  cursor: grabbing;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
