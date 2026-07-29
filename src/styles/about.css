@@ -1,0 +1,391 @@
+/**
+ * Экран «обо мне».
+ *
+ * Десктоп — точная копия фрейма 1920×1080 из Figma. Внутри сцены координаты
+ * заданы прямо в пикселях макета, а вся сцена масштабируется под окно
+ * коэффициентом --about-scale (его считает компонент). Это честное 1:1: при
+ * любом соотношении сторон композиция остаётся такой, как нарисована.
+ *
+ * Раньше я привязывал пиксели к высоте, а проценты к ширине — на окне не 16:9
+ * абзац наезжал на блок «стек». Единый масштаб эту проблему снимает.
+ *
+ * Мобильный — отдельная раскладка в одну колонку, а не уменьшенный десктоп:
+ * при 1:1 текст в 30px макета превратился бы в нечитаемые пять.
+ */
+
+.about {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: var(--color-ink);
+}
+
+.about__media {
+  display: block;
+  object-fit: cover;
+  background: #d9d9d9;
+}
+
+/* ── Сцена 1920×1080: только когда окно похоже на кадр макета ─────────────
+   Условие двойное: и достаточно широкое, и не слишком вытянутое по вертикали.
+   Одной ширины мало — в окне 930×1150 места по горизонтали хватает, но кадр
+   16:9 вписывается узкой полосой с пустотой сверху и снизу. ─────────────── */
+@media (min-width: 900px) and (min-aspect-ratio: 4 / 3) {
+  .about__stage {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 1920px;
+    height: 1080px;
+    transform: translate(-50%, -50%) scale(var(--about-scale, 1));
+    font-size: 30px;
+    line-height: normal;
+    letter-spacing: -0.07em;
+  }
+
+  .about__stage > * {
+    position: absolute;
+  }
+
+  /* Обёртка виджета нужна только телефону — на десктопе она прозрачна для
+     раскладки. Но правило position: absolute висит на прямых потомках сцены,
+     а с display: contents её дети перестают ими быть, поэтому позиционирование
+     им нужно проставить отдельно. */
+  .about__widget {
+    display: contents;
+  }
+
+  .about__widget > * {
+    position: absolute;
+  }
+
+  .about__corner {
+    left: 20px;
+    top: 20px;
+    white-space: nowrap;
+  }
+
+  .about__role {
+    margin-left: 106px;
+    margin-top: -3px;
+  }
+
+  .about__langs {
+    display: flex;
+    gap: 32px;
+    margin-top: 101px;
+  }
+
+  .about__media--intro {
+    left: 20px;
+    top: 232px;
+    width: 360px;
+    height: 192px;
+  }
+
+  /* Заголовок с абзацем: блок шириной 740, заголовок вынесен вправо. */
+  .about__block--about {
+    left: 400px;
+    top: 178px;
+    width: 740px;
+  }
+
+  .about__block--about .about__title {
+    position: absolute;
+    left: 651px;
+    top: 0;
+    white-space: nowrap;
+  }
+
+  .about__block--about .about__text {
+    position: absolute;
+    left: 0;
+    top: 54px;
+    width: 740px;
+    text-align: right;
+  }
+
+  /* «стек» с бегущей строкой. */
+  .about__block--stack {
+    left: 1160px;
+    top: 178px;
+    width: 740px;
+  }
+
+  .about__block--stack .about__stack-label {
+    position: absolute;
+    right: 0;
+    top: 0;
+    white-space: nowrap;
+  }
+
+  .about__block--stack .about__media--stack {
+    position: absolute;
+    left: 0;
+    top: 54px;
+    width: 740px;
+    height: 192px;
+  }
+
+  .about__nav {
+    left: 18px;
+    top: 444px;
+    width: 362px;
+  }
+
+  .about__nav-active {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    cursor: default;
+  }
+
+  /* Раскрывающая иконка и подложка нужны только свёрнутому меню на телефоне. */
+  .about__nav-caret,
+  .about__scrim {
+    display: none;
+  }
+
+  .about__star {
+    width: 39.5px;
+    margin-right: -13px;
+  }
+
+  .about__nav-rest,
+  .about__nav-list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    width: 362px;
+  }
+
+  .about__nav-rest {
+    margin-top: 6px;
+  }
+
+  .about__weather {
+    left: 18px;
+    top: 656px;
+    width: 109px;
+    display: flex;
+    flex-direction: column;
+    gap: 45px;
+  }
+
+  .about__media--city {
+    left: 147px;
+    top: 656px;
+    width: 234px;
+    height: 192px;
+  }
+}
+
+/* ── Колонка: телефоны и любые окна, куда кадр макета не ложится ──────── */
+@media (max-width: 899px), (max-aspect-ratio: 4 / 3) {
+  .about {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .about__stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    /* Длинная строка нечитаема: на широком окне колонку держим в разумной мере. */
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px 18px 60px;
+    gap: 34px;
+    font-size: 24px;
+    line-height: 1.08;
+    letter-spacing: -0.06em;
+  }
+
+  .about__corner {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .about__role {
+    margin-left: 2.2em;
+    margin-top: 0.06em;
+  }
+
+  .about__langs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    margin-top: 26px;
+  }
+
+  /* Видео на всю ширину, пропорции у каждого свои. */
+  .about__media {
+    width: 100%;
+    height: auto;
+  }
+
+  .about__media--intro {
+    aspect-ratio: 360 / 192;
+  }
+
+  .about__media--stack {
+    aspect-ratio: 740 / 192;
+  }
+
+  .about__media--city {
+    aspect-ratio: 234 / 192;
+    width: 62%;
+  }
+
+  /* Заголовок и абзац, «стек» и его видео — читаются парами, держим вместе. */
+  .about__block {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .about__block--about {
+    order: 2;
+  }
+
+  .about__block--stack {
+    order: 3;
+  }
+
+  .about__title,
+  .about__stack-label {
+    display: block;
+    font-size: 30px;
+  }
+
+  .about__text {
+    margin: 0;
+  }
+
+  /* Меню на телефоне — выпадающая панель в правом верхнем углу. Переключатель
+     показывает текущий раздел, список раскрывается прямо под ним и ложится
+     поверх контента: так навигация всегда на виду и не занимает места в потоке. */
+  .about__nav {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    width: auto;
+    max-width: calc(100% - 36px);
+    font-size: 30px;
+  }
+
+  .about__nav-active {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    font-style: italic;
+    cursor: pointer;
+  }
+
+  /* Подложка под раскрытым меню: размывает и высветляет контент, чтобы список
+     остался единственным, что в фокусе. */
+  .about__scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    background: rgba(231, 231, 231, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.32s ease;
+  }
+
+  .about__scrim[data-open='true'] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Подпись вместо иконки: две строки с плотным интерлиньяжем, как имя на
+     постере первого экрана. Чужая иконка тут была бы заплаткой. */
+  .about__nav-caret {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-style: normal;
+    font-size: 0.38em;
+    line-height: 0.82;
+    letter-spacing: -0.05em;
+  }
+
+  .about__star {
+    width: 26px;
+    margin: 0;
+  }
+
+  /* Раскрытие через grid-template-rows работает только с одним потомком,
+     поэтому пункты лежат в обёртке: высота анимируется от нуля до реальной,
+     без подгонки max-height на глаз. */
+  .about__nav-rest {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.32s ease;
+    width: 100%;
+  }
+
+  .about__nav[data-open='true'] .about__nav-rest {
+    grid-template-rows: 1fr;
+  }
+
+  .about__nav-list {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .about__nav-rest button {
+    display: block;
+    padding: 14px 0 0;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .about__nav-list > *:last-child {
+    padding-bottom: 4px;
+  }
+
+  /* Разделы ещё не готовы — показываем это приглушённостью, а не запретом. */
+  .about__nav-rest button:disabled {
+    opacity: 0.45;
+  }
+
+  /* На телефоне блок погоды не показываем: в узкой колонке он перегружает
+     экран и оттесняет то, ради чего раздел сделан. Сама погода никуда не
+     девается — она управляет атмосферой сайта. */
+  .about__widget {
+    display: none;
+  }
+
+  /* Верхнее видео на телефоне не показываем: в колонке оно занимает пол-экрана
+     и оттесняет текст, ради которого раздел и сделан. Остаются «стек» и Москва
+     — они привязаны к соседним блокам и работают как иллюстрации к ним. */
+  .about__media--intro {
+    display: none;
+  }
+}

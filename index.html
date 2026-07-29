@@ -19,10 +19,44 @@
     />
   </head>
   <body>
+    <!-- Фильтр «разрушенного» текста. Турбулентный шум смещает контур глифа:
+         baseFrequency задаёт размер зерна, scale — глубину съедания края.
+         Живёт в разметке, а не в компоненте, чтобы им мог пользоваться любой
+         текст на любой секции сайта. -->
+    <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+      <!-- Рваный морф: тем же турбулентным шумом, что рвёт края букв, но с
+           крупным смещением — новый экран собирается из разорванного изображения.
+           Величину смещения (scale) анимирует main.js. -->
+      <filter id="morph-tear">
+        <feTurbulence
+          id="morph-tear-noise"
+          type="fractalNoise"
+          baseFrequency="0.006 0.03"
+          numOctaves="2"
+          result="noise"
+        />
+        <feDisplacementMap
+          id="morph-tear-map"
+          in="SourceGraphic"
+          in2="noise"
+          scale="0"
+          xChannelSelector="R"
+          yChannelSelector="G"
+          result="torn"
+        />
+        <feGaussianBlur id="morph-tear-blur" in="torn" stdDeviation="0" />
+      </filter>
+
+      <filter id="rough-text">
+        <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" result="noise" />
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.6" xChannelSelector="R" yChannelSelector="G" />
+      </filter>
+    </svg>
+
     <hero-tear></hero-tear>
 
-    <!-- Основной сайт. Пока пустая белая страница — секции добавим по дизайну. -->
-    <main id="site" hidden class="min-h-screen bg-white"></main>
+    <!-- Основной сайт: экраны на весь вьюпорт, скролла между ними нет. -->
+    <main id="site" hidden class="relative h-[100svh] w-full bg-canvas"></main>
 
     <script type="module" src="/src/main.js"></script>
   </body>

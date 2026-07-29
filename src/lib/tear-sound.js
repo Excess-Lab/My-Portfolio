@@ -24,10 +24,15 @@ export class TearSound {
     this.enabled = true;
   }
 
-  /** Аудио можно заводить только после жеста пользователя — вызываем на pointerdown. */
-  async unlock() {
+  /**
+   * Завести аудио. Строго синхронно и строго внутри жеста пользователя: iOS
+   * разрешает звук только в том же такте, что и касание. Раньше здесь стояло
+   * ожидание загрузки сэмпла — к моменту старта звука жест успевал кончиться,
+   * и на телефоне звук срабатывал через раз.
+   */
+  unlock() {
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') await this.ctx.resume();
+      if (this.ctx.state === 'suspended') this.ctx.resume();
       return;
     }
 
@@ -41,14 +46,19 @@ export class TearSound {
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.9;
     this.master.connect(this.ctx.destination);
+    this.ctx.resume();
 
-    // Пробуем найти сэмпл. Нет файла — молча остаёмся на синтезе.
+    // Сэмпл подгружаем фоном: появится — со следующего разрыва будет играть он,
+    // не появится — так и останемся на синтезе. Жест этого не ждёт.
+    this.#loadSample();
+  }
+
+  async #loadSample() {
     try {
       const res = await fetch(SAMPLE_URL);
-      if (res.ok) {
-        const bytes = await res.arrayBuffer();
-        this.buffer = await this.ctx.decodeAudioData(bytes);
-      }
+      if (!res.ok) return;
+      const bytes = await res.arrayBuffer();
+      this.buffer = await this.ctx.decodeAudioData(bytes);
     } catch {
       this.buffer = null;
     }

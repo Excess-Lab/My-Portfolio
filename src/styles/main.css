@@ -65,6 +65,72 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* «Разрушенный» текст: края глифов изъедены, как при плохой печати. Делается
+   SVG-фильтром — турбулентный шум смещает контур буквы на доли пикселя. Класс
+   вешается на текстовые блоки, а не на body, иначе под фильтр попала бы
+   фотография и всё остальное. */
+.rough {
+  filter: url('#rough-text');
+}
+
+/* Фильтр — растровая операция, на слабых машинах она дорога. Уважаем настройку
+   пользователя: отключил анимации — значит и лишние эффекты не нужны. */
+@media (prefers-reduced-motion: reduce) {
+  .rough {
+    filter: none;
+  }
+}
+
+/* Солнечно: не лучи, а мягкая засветка из-за верхнего края — как пересвет на
+   плёнке. Клинья лучей едва угадываются под сильным размытием и не мешают
+   читать текст. Очень медленно «дышит». */
+.wx-sun {
+  position: absolute;
+  left: 50%;
+  top: -60vmin;
+  width: 150vmax;
+  height: 150vmax;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(closest-side, rgba(255, 255, 255, 0.9), transparent 70%),
+    repeating-conic-gradient(
+      from 200deg,
+      rgba(255, 255, 255, 0.55) 0deg 3deg,
+      transparent 3deg 11deg
+    );
+  filter: blur(38px);
+  mask-image: radial-gradient(closest-side, #000 10%, transparent 72%);
+  animation: wx-breathe 26s ease-in-out infinite alternate;
+}
+
+@keyframes wx-breathe {
+  to {
+    opacity: 0.55;
+    transform: translateX(-50%) scale(1.06);
+  }
+}
+
+/* Небо рисуется на канвасе в низком разрешении — растягиваем и слегка
+   размываем: апскейл даёт ту мягкость, которой у чётких фигур не бывает. */
+.wx-sky {
+  filter: blur(2px);
+}
+
+/* Кадры шлейфа за курсором. mix-blend-mode: multiply — портрет ложится на
+   холст как оттиск, а не как наклейка с белым ореолом. */
+.cursor-trail__face {
+  position: absolute;
+  height: auto;
+  mix-blend-mode: multiply;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wx-sun {
+    animation: none;
+  }
+}
+
 /* Хлястик тянут пальцем — браузер не должен параллельно скроллить страницу. */
 [data-drag-handle] {
   touch-action: none;

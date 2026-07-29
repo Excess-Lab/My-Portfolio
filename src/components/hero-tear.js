@@ -87,6 +87,7 @@ class HeroTear extends LitElement {
       this.lang = getLang();
     });
     this._onResize = () => {
+      this._cachedTravel = null;
       this._draggable?.[0]?.applyBounds(this._bounds());
       // Кадр переехал — маску инверсии надо совместить заново.
       this._applyInvertMask();
@@ -120,12 +121,21 @@ class HeroTear extends LitElement {
     this._applyInvertMask();
   }
 
-  /** Максимальный ход язычка = ширина белой полосы хлястика. */
+  /**
+   * Максимальный ход язычка = ширина белой полосы хлястика.
+   *
+   * Значение кешируется: его спрашивают на каждое событие указателя, а
+   * getBoundingClientRect заставляет браузер пересчитать вёрстку — на телефоне
+   * это и давало рывки. Сбрасывается на ресайзе.
+   */
   _maxTravel() {
+    if (this._cachedTravel != null) return this._cachedTravel;
+
     const strip = this.stripRef.value;
     if (!strip) return 0;
     // 285.5 из 325 — доля белой полосы во всём хлястике по макету.
-    return strip.getBoundingClientRect().width * (285.5 / 325);
+    this._cachedTravel = strip.getBoundingClientRect().width * (285.5 / 325);
+    return this._cachedTravel;
   }
 
   _bounds() {
@@ -142,9 +152,11 @@ class HeroTear extends LitElement {
       type: 'x',
       bounds: this._bounds(),
       allowNativeTouchScrolling: false,
-      onPress: async () => {
+      // Синхронно и без ожиданий: звук на iOS заводится только в том же такте,
+      // что и касание.
+      onPress: () => {
         this._lastX = instance.x;
-        await this.sound.unlock();
+        this.sound.unlock();
         this.sound.start();
       },
       onDrag: () => this._onDrag(instance.x),
@@ -165,7 +177,18 @@ class HeroTear extends LitElement {
     this._lastX = x;
     this._dragSpeed = delta;
 
-    this._paint(progress);
+    // На телефоне событий указателя приходит больше, чем кадров, а каждая
+    // перерисовка пересчитывает два многоугольника по три десятка точек.
+    // Копим прогресс и рисуем один раз за кадр — отсюда пропадает рывками.
+    this._pendingProgress = progress;
+    if (!this._paintScheduled) {
+      this._paintScheduled = true;
+      requestAnimationFrame(() => {
+        this._paintScheduled = false;
+        this._paint(this._pendingProgress);
+      });
+    }
+
     this.sound.update(speed, progress);
     // Рывок за хлястик передаётся листу — тот качается на остатке кромки.
     this._pendulum?.impulse(delta * 0.9);
@@ -217,9 +240,9 @@ class HeroTear extends LitElement {
   }
 
   /** Клавиатурный путь: Enter/Space рвут хлястик без мыши. */
-  async _tearByKey() {
+  _tearByKey() {
     if (this.torn) return;
-    await this.sound.unlock();
+    this.sound.unlock();
     this.sound.start();
 
     const tab = this.tabRef.value;
@@ -305,17 +328,33 @@ class HeroTear extends LitElement {
     canvas.classList.remove('hidden');
     person.style.visibility = 'hidden';
 
+    // Раздел начинает собираться прямо сейчас, под распадающейся фигурой:
+    // распад и рваный морф идут внахлёст, поэтому переход видно, а не
+    // подменяется кадр после паузы.
+    this._goToSite();
+
     this._cancelAtoms = atomize(canvas, person, {
       duration: 1900,
-      onDone: () => this._goToSite(),
+      onDone: () => this._fadeOutHero(),
     });
 
-    // Белая вспышка догоняет разлетающиеся частицы.
+    // Вспышка не забеливает экран целиком: под ней уже проступает раздел,
+    // и полное перекрытие спрятало бы переход.
     gsap.to(this.flashRef.value, {
-      opacity: 1,
+      opacity: 0.45,
       duration: 1.1,
-      delay: 0.9,
+      delay: 0.7,
       ease: 'power2.in',
+    });
+  }
+
+  /** Частицы догорели — первый экран растворяется поверх уже собравшегося раздела. */
+  _fadeOutHero() {
+    gsap.to(this, {
+      opacity: 0,
+      duration: 0.5,
+      ease: 'power2.inOut',
+      onComplete: () => this.remove(),
     });
   }
 
@@ -435,7 +474,7 @@ class HeroTear extends LitElement {
     const langCode = this.lang;
 
     return html`
-      <div class="fixed inset-0 overflow-hidden bg-canvas">
+      <div class="fixed inset-0 z-20 overflow-hidden bg-canvas">
         <!-- Кадр с фотографией: всё внутри позиционируется в % от него -->
         <div
           ${ref(this.stageRef)}
@@ -463,7 +502,7 @@ class HeroTear extends LitElement {
                    background-image: linear-gradient(180.4deg, rgba(234,234,237,0) 5.9%, rgb(234,234,237) 11.9%, rgb(255,255,255) 99.7%);"
           >
             <div
-              class="absolute left-1/2 -translate-x-1/2 text-center leading-none tracking-[-0.07em] whitespace-nowrap"
+              class="rough absolute left-1/2 -translate-x-1/2 text-center leading-none tracking-[-0.07em] whitespace-nowrap"
               style="top:42.9%; font-size: calc(var(--tx) * 30);"
             >
               <div id="poster-title">${t('posterFirst')}</div>
@@ -504,7 +543,7 @@ class HeroTear extends LitElement {
               style="background-size: 100% 100%;"
             >
               <div
-                class="absolute left-[-2.5%] top-1/2 flex -translate-y-1/2 whitespace-nowrap tracking-[-0.04em]"
+                class="rough absolute left-[-2.5%] top-1/2 flex -translate-y-1/2 whitespace-nowrap tracking-[-0.04em]"
                 style="font-size: calc(var(--tx) * 10); gap: calc(var(--tx) * 6);"
               >
                 ${Array.from(
@@ -553,7 +592,7 @@ class HeroTear extends LitElement {
              и без цветной каймы на коже. -->
         <div
           ${ref(this.cornerRef)}
-          class="absolute left-[max(1.05vw,14px)] top-[max(1.85vh,14px)] leading-none tracking-[-0.07em] text-black"
+          class="rough absolute left-[max(1.05vw,14px)] top-[max(1.85vh,14px)] leading-none tracking-[-0.07em] text-black"
           style="font-size: clamp(15px, calc(var(--tx) * 30), 30px);"
         >
           ${this._cornerLines(langCode, false)}
@@ -564,7 +603,7 @@ class HeroTear extends LitElement {
         <div
           ${ref(this.cornerInvRef)}
           aria-hidden="true"
-          class="pointer-events-none absolute inset-0 text-white"
+          class="rough pointer-events-none absolute inset-0 text-white"
         >
           <div
             class="absolute left-[max(1.05vw,14px)] top-[max(1.85vh,14px)] leading-none tracking-[-0.07em]"
