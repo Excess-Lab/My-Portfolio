@@ -152,6 +152,53 @@ class AboutScreen extends LitElement {
     `;
   }
 
+  /**
+   * Меню рендерится двумя копиями: одна внутри сцены — там у неё координаты
+   * макета, вторая снаружи секции — только она может лечь поверх подложки.
+   * Фильтр на секции создавал бы контекст наложения и запирал z-index внутри,
+   * из-за чего подложка накрывала меню вместе с текстом.
+   */
+  _nav(where) {
+    return html`
+      <nav
+        class="about__nav about__nav--${where} rough"
+        data-open=${this.menuOpen ? 'true' : 'false'}
+      >
+        <button
+          type="button"
+          class="about__nav-active"
+          aria-expanded=${this.menuOpen ? 'true' : 'false'}
+          @click=${() => {
+            this.menuOpen = !this.menuOpen;
+          }}
+        >
+          <img src=${starUrl} alt="" class="about__star" />
+          ${t('about')}
+          <span class="about__nav-caret" aria-hidden="true">
+            <span>${this.menuOpen ? t('menuHide') : t('menuShow')}</span>
+            <span>${t('menuList')}</span>
+          </span>
+        </button>
+        <div class="about__nav-rest">
+          <div class="about__nav-list">
+            ${SECTIONS.map(
+              (key) => html`
+                <button
+                  type="button"
+                  disabled
+                  class="bg-transparent p-0 font-serif tracking-[inherit] whitespace-nowrap"
+                  style="font-size: inherit; color: inherit;"
+                >
+                  ${t(key)}
+                </button>
+              `,
+            )}
+          </div>
+        </div>
+      </nav>
+    `;
+  }
+
   render() {
     const condition = this.weather?.condition ?? 'none';
 
@@ -169,9 +216,11 @@ class AboutScreen extends LitElement {
         }}
       ></div>
 
-      <section class="about rough">
+      ${this._nav('mobile')}
+
+      <section class="about">
         <div ${ref(this.stageRef)} class="about__stage">
-          <div class="about__corner">
+          <div class="about__corner rough">
             <div>${t('name')}</div>
             <div class="about__role">${t('role')}</div>
             <div class="about__langs">${this._langButtons()}</div>
@@ -180,48 +229,16 @@ class AboutScreen extends LitElement {
           ${this._video('intro', 'about-1.mp4')}
 
           <div class="about__block about__block--about">
-            <h2 class="about__title">${t('about')}</h2>
-            <p class="about__text">${t('aboutText')}</p>
+            <h2 class="about__title rough">${t('about')}</h2>
+            <p class="about__text rough">${t('aboutText')}</p>
           </div>
 
           <div class="about__block about__block--stack">
-            <span class="about__stack-label">${t('stack')}</span>
+            <span class="about__stack-label rough">${t('stack')}</span>
             ${this._video('stack', 'about-3.mp4')}
           </div>
 
-          <nav class="about__nav" data-open=${this.menuOpen ? 'true' : 'false'}>
-            <button
-              type="button"
-              class="about__nav-active"
-              aria-expanded=${this.menuOpen ? 'true' : 'false'}
-              @click=${() => {
-                this.menuOpen = !this.menuOpen;
-              }}
-            >
-              <img src=${starUrl} alt="" class="about__star" />
-              ${t('about')}
-              <span class="about__nav-caret" aria-hidden="true">
-                <span>${this.menuOpen ? t('menuHide') : t('menuShow')}</span>
-                <span>${t('menuList')}</span>
-              </span>
-            </button>
-            <div class="about__nav-rest">
-              <div class="about__nav-list">
-              ${SECTIONS.map(
-                (key) => html`
-                  <button
-                    type="button"
-                    disabled
-                    class="bg-transparent p-0 font-serif tracking-[inherit] whitespace-nowrap"
-                    style="font-size: inherit; color: inherit;"
-                  >
-                    ${t(key)}
-                  </button>
-                `,
-              )}
-              </div>
-            </div>
-          </nav>
+          ${this._nav('desktop')}
 
           <!-- На десктопе погода и видео стоят по координатам макета порознь,
                на телефоне собираются в одну карточку. Обёртка на десктопе
@@ -229,7 +246,7 @@ class AboutScreen extends LitElement {
                не ломаются. -->
           <div class="about__widget">
             ${this._video('city', 'about-2.mp4')}
-            <div class="about__weather">
+            <div class="about__weather rough">
               <span class="about__weather-city">${t('city')}</span>
               <span class="about__weather-temp italic">${this._temperatureLabel()}</span>
               <span class="about__weather-state">${this._conditionLabel()}</span>

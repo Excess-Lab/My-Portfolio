@@ -333,29 +333,27 @@ class HeroTear extends LitElement {
     // подменяется кадр после паузы.
     this._goToSite();
 
-    this._cancelAtoms = atomize(canvas, person, {
-      duration: 1900,
-      onDone: () => this._fadeOutHero(),
-    });
+    this._cancelAtoms = atomize(canvas, person, { duration: 1900 });
 
-    // Вспышка не забеливает экран целиком: под ней уже проступает раздел,
-    // и полное перекрытие спрятало бы переход.
-    gsap.to(this.flashRef.value, {
-      opacity: 0.45,
-      duration: 1.1,
-      delay: 0.7,
-      ease: 'power2.in',
-    });
-  }
-
-  /** Частицы догорели — первый экран растворяется поверх уже собравшегося раздела. */
-  _fadeOutHero() {
+    // Перекрёстное растворение: пока частицы разлетаются, первый экран угасает,
+    // а раздел под ним собирается из искажения. Оба кадра живут одновременно —
+    // это и читается как переход одного в другое, а не как подмена после паузы.
+    // Раньше экран держался непрозрачным до конца распада и гас потом — отсюда
+    // был рывок.
     gsap.to(this, {
       opacity: 0,
-      duration: 0.5,
-      ease: 'power2.inOut',
+      duration: 1.7,
+      delay: 0.45,
+      ease: 'sine.inOut',
       onComplete: () => this.remove(),
     });
+
+    // Вспышка только подсвечивает стык и гаснет: сплошное забеливание спрятало
+    // бы переход целиком.
+    gsap
+      .timeline()
+      .to(this.flashRef.value, { opacity: 0.32, duration: 0.7, ease: 'power2.in' })
+      .to(this.flashRef.value, { opacity: 0, duration: 0.9, ease: 'power2.out' });
   }
 
   /**

@@ -13,6 +13,9 @@ const ENDPOINT =
   `?latitude=${MOSCOW.latitude}&longitude=${MOSCOW.longitude}` +
   `&current=temperature_2m,weather_code,is_day&timezone=Europe%2FMoscow`;
 
+// Запасной источник: отвечает там, где open-meteo недоступен.
+const FALLBACK_ENDPOINT = 'https://wttr.in/Moscow?format=j1';
+
 // Кеш на полчаса: погода не меняется ежесекундно, а лишние запросы при
 // переключении экранов ни к чему.
 const CACHE_KEY = 'mk:weather';
@@ -61,33 +64,69 @@ function writeCache(value) {
  * @returns {Promise<Weather>} бросает, если данных нет — вызывающий решает,
  *   что показывать
  */
+/** Запрос с тайм-аутом: висящий фетч не должен держать блок в загрузке. */
+async function getJson(url, ms = 6000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), ms);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(`${url}: ${response.status}`);
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fromOpenMeteo() {
+  const data = await getJson(ENDPOINT);
+  const current = data.current;
+  if (!current) throw new Error('open-meteo: пустой ответ');
+
+  return {
+    condition: toCondition(current.weather_code, current.is_day === 1),
+    temperature: Math.round(current.temperature_2m),
+    isDay: current.is_day === 1,
+  };
+}
+
+/**
+ * Запасной источник. Нужен потому, что open-meteo доступен не из всех сетей —
+ * на проде без VPN блок показывал «нет связи», хотя интернет был.
+ */
+async function fromWttr() {
+  const data = await getJson(FALLBACK_ENDPOINT);
+  const current = data?.current_condition?.[0];
+  if (!current) throw new Error('wttr: пустой ответ');
+
+  return {
+    // wttr отдаёт коды WWO — они совпадают с WMO в тех группах, которые нам нужны.
+    condition: toCondition(Number(current.weatherCode), true),
+    temperature: Math.round(Number(current.temp_C)),
+    isDay: true,
+  };
+}
+
+/**
+ * @typedef {{condition: string, temperature: number, isDay: boolean}} Weather
+ * @returns {Promise<Weather>} бросает, только если не ответил ни один источник
+ */
 export async function fetchWeather() {
   const cached = readCache();
   if (cached) return cached;
 
-  // Тайм-аут: висящий запрос не должен держать интерфейс в состоянии загрузки.
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 6000);
-
-  try {
-    const response = await fetch(ENDPOINT, { signal: controller.signal });
-    if (!response.ok) throw new Error(`open-meteo: ${response.status}`);
-
-    const data = await response.json();
-    const current = data.current;
-    if (!current) throw new Error('open-meteo: пустой ответ');
-
-    const value = {
-      condition: toCondition(current.weather_code, current.is_day === 1),
-      temperature: Math.round(current.temperature_2m),
-      isDay: current.is_day === 1,
-    };
-
-    writeCache(value);
-    return value;
-  } finally {
-    clearTimeout(timeout);
+  let lastError;
+  for (const source of [fromOpenMeteo, fromWttr]) {
+    try {
+      const value = await source();
+      writeCache(value);
+      return value;
+    } catch (error) {
+      lastError = error;
+    }
   }
+
+  throw lastError ?? new Error('погода недоступна');
 }
 
 /** Ключ перевода для подписи состояния. */
