@@ -1,0 +1,230 @@
+/**
+ * Меню разделов — общее для всех экранов.
+ *
+ * На десктопе стоит по координатам макета внутри сцены. На телефоне
+ * превращается в выпадающую панель в правом верхнем углу: видно текущий
+ * раздел, список раскрывается нажатием и ложится поверх контента.
+ */
+
+/* ── Десктоп ──────────────────────────────────────────────────────────── */
+@media (min-width: 900px) and (min-aspect-ratio: 4 / 3) {
+  /* На десктопе работает копия внутри сцены: только там координаты макета
+     масштабируются вместе с кадром. Внешняя копия нужна телефону — она одна
+     может лечь поверх подложки. */
+  .site-nav[data-where='overlay'] {
+    display: none;
+  }
+
+  .site-nav {
+    position: absolute;
+    left: 18px;
+    top: 444px;
+    width: 362px;
+  }
+
+  .site-nav__current {
+    display: inline-flex;
+    align-items: center;
+    padding: 0;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    cursor: default;
+  }
+
+  /* Подсказка про раскрытие и подложка нужны только телефону. */
+  .site-nav__hint,
+  .site-scrim {
+    display: none;
+  }
+
+  .site-nav__star {
+    width: 39.5px;
+    margin-right: -13px;
+  }
+
+  .site-nav__rest,
+  .site-nav__list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    width: 362px;
+  }
+
+  .site-nav__rest {
+    margin-top: 6px;
+  }
+
+  .site-nav__item {
+    background: none;
+    padding: 0;
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+  }
+
+  .site-nav__item:hover:not(:disabled) {
+    opacity: 0.55;
+  }
+}
+
+/* ── Телефон и окна, куда кадр макета не ложится ──────────────────────── */
+@media (max-width: 899px), (max-aspect-ratio: 4 / 3) {
+  .site-nav[data-where='stage'] {
+    display: none;
+  }
+
+  /* Меню прижато к низу экрана, а не к шапке: сверху оно налезало на имя с
+     специализацией, а внизу и не мешает, и ближе к большому пальцу. Список
+     раскрывается вверх — отсюда column-reverse. */
+  .site-nav {
+    position: fixed;
+    right: 18px;
+    bottom: max(18px, env(safe-area-inset-bottom));
+    z-index: 6;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+    width: auto;
+    max-width: calc(100% - 36px);
+    font-size: 26px;
+    line-height: 1.08;
+    letter-spacing: -0.06em;
+  }
+
+  .site-nav__current {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    font-style: italic;
+    cursor: pointer;
+  }
+
+  /* Меню висит поверх контента и на превью проектов сливалось с картинкой.
+     Раньше его вытягивал разностный блендинг, но он же съедал звезду: иконка
+     чёрная, а разность с чёрным оставляет фон нетронутым — на телефоне икона
+     просто исчезала, хотя на десктопе стояла на месте. */
+  .site-nav {
+    color: var(--color-ink);
+    background: none;
+  }
+
+  /* За меню — белое размытое пятно. Отдельным слоем под текстом, шире самого
+     блока: белое сходит на нет к краям, поэтому границы нет, а буквы со
+     звездой остаются плотными. Обычный градиент плюс blur — без
+     backdrop-filter, который в Safari работал через раз. */
+  .site-nav::before {
+    content: '';
+    position: absolute;
+    inset: -12px -16px -14px;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse closest-side at 50% 50%,
+      rgba(255, 255, 255, 0.92) 18%,
+      rgba(255, 255, 255, 0.55) 55%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    filter: blur(6px);
+  }
+
+  .site-nav__star {
+    width: 22px;
+    margin: 0;
+  }
+
+  /* Подпись вместо иконки: две строки с плотным интерлиньяжем, как имя на
+     постере первого экрана. Чужая иконка тут была бы заплаткой. */
+  .site-nav__hint {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-style: normal;
+    font-size: 0.38em;
+    line-height: 0.82;
+    letter-spacing: -0.05em;
+  }
+
+  /* Размытие вешаем прямо на контент, а не на подложку через backdrop-filter:
+     тот зависит от порядка отрисовки и молча перестаёт работать, стоит любому
+     предку получить свой фильтр. Меню лежит снаружи секции и не размывается. */
+  body[data-menu-open='true'] .about,
+  body[data-menu-open='true'] weather-ambient {
+    filter: blur(10px);
+  }
+
+  .about,
+  weather-ambient {
+    transition: filter 0.32s ease;
+  }
+
+  .site-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    background: rgba(231, 231, 231, 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.32s ease;
+  }
+
+  .site-scrim[data-open='true'] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* Раскрытие через grid-template-rows работает только с одним потомком,
+     поэтому пункты лежат в обёртке: высота анимируется от нуля до реальной,
+     без подгонки max-height на глаз. */
+  .site-nav__rest {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.32s ease;
+    width: 100%;
+  }
+
+  .site-nav[data-open='true'] .site-nav__rest {
+    grid-template-rows: 1fr;
+  }
+
+  .site-nav__list {
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    padding-bottom: 10px;
+  }
+
+  .site-nav__item {
+    display: block;
+    padding: 0 0 14px;
+    background: none;
+    font: inherit;
+    letter-spacing: inherit;
+    color: inherit;
+    text-align: right;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  /* Разделы ещё не готовы — показываем это приглушённостью, а не запретом. */
+  .site-nav__item:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}

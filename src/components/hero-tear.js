@@ -6,6 +6,7 @@ import { Draggable } from 'gsap/Draggable';
 import { LOCALES, getLang, setLang, t, onLanguageChange } from '../i18n/index.js';
 import { TearSound } from '../lib/tear-sound.js';
 import { atomize } from '../lib/atomize.js';
+import { collectTargets } from '../lib/assemble-targets.js';
 import { dropPaper, SheetPendulum } from '../lib/paper-physics.js';
 import {
   createTearProfile,
@@ -99,7 +100,9 @@ class HeroTear extends LitElement {
     this._offLang?.();
     window.removeEventListener('resize', this._onResize);
     this._draggable?.[0]?.kill();
-    this._cancelAtoms?.();
+    // Распад к этому моменту живёт своей жизнью на канвасе в body: экран уходит
+    // из DOM намеренно, посреди анимации, и обрывать её здесь нельзя.
+    if (!this._atomsDetached) this._cancelAtoms?.();
     this._cancelDrops.forEach((cancel) => cancel());
     this.sound.stop();
     super.disconnectedCallback();
@@ -278,6 +281,16 @@ class HeroTear extends LitElement {
     this.barRef.value?.remove();
     this.tornLayerRef.value?.remove();
 
+    // Верх листа полупрозрачный: так он сливается с бумагой на фотографии, пока
+    // его держат в руках. В полёте это выходит боком — лист проходит над
+    // чёрными джинсами, тёмное просвечивает сквозь него, и рядом с бумагой
+    // летит косой тёмный клин, неотличимый от тени. Оторванный лист прятать
+    // больше не от чего, поэтому делаем его сплошным.
+    if (this.posterRef.value) {
+      this.posterRef.value.style.backgroundImage =
+        'linear-gradient(180.4deg, rgb(234,234,237) 0%, rgb(255,255,255) 99.7%)';
+    }
+
     // Маятник передаёт эстафету падению: лист срывается с того наклона,
     // на котором висел, а не подпрыгивает в ноль.
     const tilt = this._pendulum?.angle ?? 0;
@@ -317,7 +330,7 @@ class HeroTear extends LitElement {
     this._runAtomize();
   }
 
-  _runAtomize() {
+  async _runAtomize() {
     const person = this.personRef.value;
     const canvas = this.canvasRef.value;
     if (!person || !canvas) {
@@ -328,32 +341,60 @@ class HeroTear extends LitElement {
     canvas.classList.remove('hidden');
     person.style.visibility = 'hidden';
 
-    // Раздел начинает собираться прямо сейчас, под распадающейся фигурой:
-    // распад и рваный морф идут внахлёст, поэтому переход видно, а не
-    // подменяется кадр после паузы.
+    // Канвас переезжает в body поверх всего. Раздел лежит в DOM после первого
+    // экрана, поэтому, проявляясь, он закрывал собой частицы: вместо сборки
+    // было видно, как поверх зернистого облака наплывает готовый кадр. Сверху
+    // рой садится на уже проступивший экран и гаснет последним.
+    canvas.className = 'atomize-canvas';
+    document.body.append(canvas);
+    this._atomsDetached = true;
+
+    // Раздел создаём сразу, но невидимым: он нужен, чтобы измерить, где встанут
+    // его блоки. По этим местам и соберутся частицы.
     this._goToSite();
 
-    this._cancelAtoms = atomize(canvas, person, { duration: 1900 });
+    const screen = document.querySelector('#site')?.firstElementChild;
+    // Lit рендерит асинхронно: сразу после создания у экрана ещё нет ни одного
+    // блока, и мишени вышли бы пустыми. Ждём первую отрисовку.
+    await screen?.updateComplete;
+    const targets = collectTargets(screen);
 
-    // Перекрёстное растворение: пока частицы разлетаются, первый экран угасает,
-    // а раздел под ним собирается из искажения. Оба кадра живут одновременно —
-    // это и читается как переход одного в другое, а не как подмена после паузы.
-    // Раньше экран держался непрозрачным до конца распада и гас потом — отсюда
-    // был рывок.
-    gsap.to(this, {
-      opacity: 0,
-      duration: 1.7,
-      delay: 0.45,
-      ease: 'sine.inOut',
-      onComplete: () => this.remove(),
+    // ?slow=8 растягивает распад: так его можно рассмотреть покадрово.
+    const slow = Number(new URLSearchParams(location.search).get('slow')) || 1;
+
+    this._cancelAtoms = atomize(canvas, person, {
+      duration: 2600 * slow,
+      targets,
+      // Пока частицы садятся по местам, под ними проявляется настоящий экран.
+      // К концу сборки он уже на месте, и частицы гаснут поверх готового кадра —
+      // подмены не видно, фигура буквально пересобирается в сайт.
+      // Экран проявляется только после того, как рой встал по местам: сначала
+      // из частиц складывается силуэт раскладки, и уже он превращается в
+      // вёрстку. Начни проявление раньше — и всё читалось бы наоборот:
+      // интерфейс приехал сам, а частицы к нему подлетели.
+      onAssemble: (progress) => {
+        if (!screen) return;
+        screen.style.opacity = String(Math.min(1, Math.max(0, (progress - 0.72) / 0.24)));
+      },
+      onDone: () => {
+        if (screen) screen.style.opacity = '1';
+        canvas.remove();
+      },
     });
 
-    // Вспышка только подсвечивает стык и гаснет: сплошное забеливание спрятало
-    // бы переход целиком.
-    gsap
-      .timeline()
-      .to(this.flashRef.value, { opacity: 0.32, duration: 0.7, ease: 'power2.in' })
-      .to(this.flashRef.value, { opacity: 0, duration: 0.9, ease: 'power2.out' });
+    // Первый экран больше не нужен: фигура целиком перешла в частицы, а лист с
+    // хлястиком улетели за нижний край. Уходит он сейчас, а не в конце сборки,
+    // иначе его фон так и стоял бы стеной между роем и проступающим разделом.
+    //
+    // Не мгновенно: вместе с ним пропадают имя и языки в углу, и резкое
+    // исчезновение читалось как склейка двух разных кадров. За полсекунды
+    // подписи растворяются вместе с фигурой — уходит весь экран целиком.
+    gsap.to(this, {
+      opacity: 0,
+      duration: 0.5,
+      ease: 'power2.in',
+      onComplete: () => this.remove(),
+    });
   }
 
   /**
@@ -487,11 +528,6 @@ class HeroTear extends LitElement {
             class="pointer-events-none absolute left-0 top-[-34.07%] h-[134.07%] w-full max-w-none object-cover select-none"
             draggable="false"
           />
-          <canvas
-            ${ref(this.canvasRef)}
-            class="pointer-events-none absolute left-0 top-[-34.07%] hidden h-[134.07%] w-full"
-          ></canvas>
-
           <!-- Постер -->
           <div
             ${ref(this.posterRef)}
@@ -582,6 +618,16 @@ class HeroTear extends LitElement {
             </div>
           </div>
         </div>
+
+        <!-- Канвас распада лежит вне кадра с фотографией не случайно: у кадра
+             есть -translate-x-1/2, а трансформ предка превращает fixed в
+             позиционирование относительно него — канвас так и оставался
+             размером с кадр, и частицы, летящие к блокам нового экрана,
+             обрезались по его границам. -->
+        <canvas
+          ${ref(this.canvasRef)}
+          class="pointer-events-none absolute inset-0 hidden h-full w-full"
+        ></canvas>
 
         <!-- Имя, специализация, языки.
              Два одинаковых слоя: чёрный снизу и белый сверху. Белый обрезан

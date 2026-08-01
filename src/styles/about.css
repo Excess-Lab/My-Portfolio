@@ -127,48 +127,6 @@
     height: 192px;
   }
 
-  .about__nav {
-    left: 18px;
-    top: 444px;
-    width: 362px;
-  }
-
-  .about__nav-active {
-    display: inline-flex;
-    align-items: center;
-    padding: 0;
-    background: none;
-    font: inherit;
-    letter-spacing: inherit;
-    color: inherit;
-    cursor: default;
-  }
-
-  /* Раскрывающая подпись, подложка и мобильная копия меню — только для телефона. */
-  .about__nav-caret,
-  .about__scrim,
-  .about__nav.about__nav--mobile {
-    display: none;
-  }
-
-  .about__star {
-    width: 39.5px;
-    margin-right: -13px;
-  }
-
-  .about__nav-rest,
-  .about__nav-list {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 5px;
-    width: 362px;
-  }
-
-  .about__nav-rest {
-    margin-top: 6px;
-  }
-
   .about__weather {
     left: 18px;
     top: 656px;
@@ -198,6 +156,8 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    /* Внизу висит меню — оставляем ему место, чтобы не перекрывало контент. */
+    padding-bottom: 120px;
     /* Длинная строка нечитаема: на широком окне колонку держим в разумной мере. */
     max-width: 720px;
     margin: 0 auto;
@@ -267,119 +227,6 @@
 
   .about__text {
     margin: 0;
-  }
-
-  /* Меню на телефоне — выпадающая панель в правом верхнем углу. Переключатель
-     показывает текущий раздел, список раскрывается прямо под ним и ложится
-     поверх контента: так навигация всегда на виду и не занимает места в потоке. */
-  /* Внутри сцены меню на телефоне не нужно: работает копия снаружи, она одна
-     может лечь поверх подложки. */
-  .about__nav.about__nav--desktop {
-    display: none;
-  }
-
-  .about__nav {
-    position: fixed;
-    top: 18px;
-    right: 18px;
-    z-index: 6;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    width: auto;
-    max-width: calc(100% - 36px);
-    font-size: 30px;
-  }
-
-  .about__nav-active {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0;
-    background: none;
-    font: inherit;
-    letter-spacing: inherit;
-    color: inherit;
-    font-style: italic;
-    cursor: pointer;
-  }
-
-  /* Подложка под раскрытым меню: размывает и высветляет контент, чтобы список
-     остался единственным, что в фокусе. */
-  .about__scrim {
-    position: fixed;
-    inset: 0;
-    z-index: 4;
-    background: rgba(231, 231, 231, 0.45);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.32s ease;
-  }
-
-  .about__scrim[data-open='true'] {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  /* Подпись вместо иконки: две строки с плотным интерлиньяжем, как имя на
-     постере первого экрана. Чужая иконка тут была бы заплаткой. */
-  .about__nav-caret {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    font-style: normal;
-    font-size: 0.38em;
-    line-height: 0.82;
-    letter-spacing: -0.05em;
-  }
-
-  .about__star {
-    width: 26px;
-    margin: 0;
-  }
-
-  /* Раскрытие через grid-template-rows работает только с одним потомком,
-     поэтому пункты лежат в обёртке: высота анимируется от нуля до реальной,
-     без подгонки max-height на глаз. */
-  .about__nav-rest {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    grid-template-rows: 0fr;
-    transition: grid-template-rows 0.32s ease;
-    width: 100%;
-  }
-
-  .about__nav[data-open='true'] .about__nav-rest {
-    grid-template-rows: 1fr;
-  }
-
-  .about__nav-list {
-    min-height: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-  }
-
-  .about__nav-rest button {
-    display: block;
-    padding: 14px 0 0;
-    text-align: right;
-    white-space: nowrap;
-  }
-
-  .about__nav-list > *:last-child {
-    padding-bottom: 4px;
-  }
-
-  /* Разделы ещё не готовы — показываем это приглушённостью, а не запретом. */
-  .about__nav-rest button:disabled {
-    opacity: 0.45;
   }
 
   /* На телефоне блок погоды не показываем: в узкой колонке он перегружает

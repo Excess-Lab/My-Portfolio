@@ -1,0 +1,127 @@
+/**
+ * Архив идей — список мыслей, раскрывающихся на месте.
+ *
+ * Шапка, поиск и кегль берутся от кейсов: это один и тот же тип экрана —
+ * прокручиваемый поток с поиском, поэтому раздел носит и класс .cases.
+ * Здесь только то, чем список мыслей отличается от ленты карточек.
+ */
+
+.ideas__feed {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 40px 20px 120px;
+}
+
+/* Записи разделяет линия, а не отступ: архив должен выглядеть описью, а не
+   набором карточек. */
+.ideas__item {
+  border-top: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+.ideas__item:last-child {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+}
+
+.ideas__head {
+  display: grid;
+  align-items: baseline;
+  gap: 8px 24px;
+  width: 100%;
+  padding: 18px 0 20px;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ideas__date {
+  font-size: 0.5em;
+  letter-spacing: -0.02em;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.ideas__title {
+  transition: opacity 0.2s ease;
+}
+
+.ideas__head:hover .ideas__title {
+  opacity: 0.6;
+}
+
+.ideas__action {
+  font-size: 0.5em;
+  letter-spacing: -0.02em;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+/* Раскрытие через grid-template-rows: 0fr → 1fr. Высоту считает браузер по
+   реальному тексту, поэтому подгонять max-height не нужно. Работает только с
+   одним потомком — отсюда внутренняя обёртка. */
+.ideas__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.36s ease;
+}
+
+.ideas__item[data-open='true'] .ideas__body {
+  grid-template-rows: 1fr;
+}
+
+.ideas__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ideas__text {
+  margin: 0 0 0.7em;
+  font-size: 0.62em;
+  line-height: 1.32;
+  opacity: 0.85;
+  max-width: 62ch;
+}
+
+.ideas__text:last-child {
+  margin-bottom: 26px;
+}
+
+/* ── Десктоп ──────────────────────────────────────────────────────────── */
+@media (min-width: 900px) and (min-aspect-ratio: 4 / 3) {
+  /* Дата слева, название по центру колонки, действие справа: строка читается
+     как запись в описи, а не как заголовок с подписями. */
+  .ideas__head {
+    grid-template-columns: 10em 1fr auto;
+  }
+
+  .ideas__inner {
+    padding-left: calc(10em + 24px);
+  }
+}
+
+/* ── Телефон ──────────────────────────────────────────────────────────── */
+@media (max-width: 899px), (max-aspect-ratio: 4 / 3) {
+  .ideas__feed {
+    padding: 28px 18px 160px;
+  }
+
+  /* В колонке дата и действие встают одной строкой над названием: держать
+     три колонки на такой ширине нечем. */
+  .ideas__head {
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+  }
+
+  .ideas__title {
+    grid-column: 1 / -1;
+  }
+
+  .ideas__action {
+    text-align: right;
+  }
+}

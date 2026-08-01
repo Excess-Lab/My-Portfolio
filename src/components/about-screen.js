@@ -4,8 +4,7 @@ import { createRef, ref } from 'lit/directives/ref.js';
 import { LOCALES, getLang, setLang, t, onLanguageChange } from '../i18n/index.js';
 import { fetchWeather, conditionKey } from '../lib/weather.js';
 import './weather-ambient.js';
-
-import starUrl from '../assets/star.svg';
+import './site-nav.js';
 
 // Разделы меню. Кроме «обо мне» они появятся позже — пока просто помечены.
 const SECTIONS = ['cases', 'archive', 'gallery', 'contacts'];
@@ -30,7 +29,6 @@ class AboutScreen extends LitElement {
     lang: { state: true },
     weather: { state: true },
     weatherError: { state: true },
-    menuOpen: { state: true },
   };
 
   constructor() {
@@ -39,9 +37,6 @@ class AboutScreen extends LitElement {
     this.weather = null;
     this.weatherError = false;
     this.stageRef = createRef();
-    // На телефоне меню свёрнуто: видно текущий раздел, список открывается по
-    // нажатию. На десктопе список всегда развёрнут — там места хватает.
-    this.menuOpen = false;
     this._override = weatherOverride();
   }
 
@@ -152,71 +147,13 @@ class AboutScreen extends LitElement {
     `;
   }
 
-  /**
-   * Меню рендерится двумя копиями: одна внутри сцены — там у неё координаты
-   * макета, вторая снаружи секции — только она может лечь поверх подложки.
-   * Фильтр на секции создавал бы контекст наложения и запирал z-index внутри,
-   * из-за чего подложка накрывала меню вместе с текстом.
-   */
-  _nav(where) {
-    return html`
-      <nav
-        class="about__nav about__nav--${where} rough"
-        data-open=${this.menuOpen ? 'true' : 'false'}
-      >
-        <button
-          type="button"
-          class="about__nav-active"
-          aria-expanded=${this.menuOpen ? 'true' : 'false'}
-          @click=${() => {
-            this.menuOpen = !this.menuOpen;
-          }}
-        >
-          <img src=${starUrl} alt="" class="about__star" />
-          ${t('about')}
-          <span class="about__nav-caret" aria-hidden="true">
-            <span>${this.menuOpen ? t('menuHide') : t('menuShow')}</span>
-            <span>${t('menuList')}</span>
-          </span>
-        </button>
-        <div class="about__nav-rest">
-          <div class="about__nav-list">
-            ${SECTIONS.map(
-              (key) => html`
-                <button
-                  type="button"
-                  disabled
-                  class="bg-transparent p-0 font-serif tracking-[inherit] whitespace-nowrap"
-                  style="font-size: inherit; color: inherit;"
-                >
-                  ${t(key)}
-                </button>
-              `,
-            )}
-          </div>
-        </div>
-      </nav>
-    `;
-  }
-
   render() {
     const condition = this.weather?.condition ?? 'none';
 
     return html`
       <weather-ambient condition=${condition}></weather-ambient>
 
-      <!-- Подложка живёт снаружи section.about не случайно: на нём висит
-           фильтр «разрушенного» текста, а backdrop-filter внутри элемента с
-           filter размывать нечего — фильтр предка обрывает ему фон. -->
-      <div
-        class="about__scrim"
-        data-open=${this.menuOpen ? 'true' : 'false'}
-        @click=${() => {
-          this.menuOpen = false;
-        }}
-      ></div>
-
-      ${this._nav('mobile')}
+      <site-nav where="overlay" current="about"></site-nav>
 
       <section class="about">
         <div ${ref(this.stageRef)} class="about__stage">
@@ -238,7 +175,7 @@ class AboutScreen extends LitElement {
             ${this._video('stack', 'about-3.mp4')}
           </div>
 
-          ${this._nav('desktop')}
+          <site-nav where="stage" current="about"></site-nav>
 
           <!-- На десктопе погода и видео стоят по координатам макета порознь,
                на телефоне собираются в одну карточку. Обёртка на десктопе

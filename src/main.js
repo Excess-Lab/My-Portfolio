@@ -2,8 +2,13 @@ import { gsap } from 'gsap';
 
 import './styles/main.css';
 import './styles/about.css';
+import './styles/nav.css';
+import './styles/cases.css';
+import './styles/ideas.css';
 import './components/hero-tear.js';
 import './components/about-screen.js';
+import './components/cases-screen.js';
+import './components/archive-screen.js';
 import './components/cursor-trail.js';
 
 const site = document.querySelector('#site');
@@ -63,16 +68,30 @@ function morphIn(screen) {
   );
 }
 
+// Разделы: ключ меню → тег экрана. Новый раздел добавляется одной строкой.
+const SCREENS = {
+  about: 'about-screen',
+  cases: 'cases-screen',
+  archive: 'archive-screen',
+};
+
 /**
- * Переход на раздел.
+ * Показать раздел. Экраны сменяются целиком, без скролла между ними.
  */
-function openAbout({ morph = false } = {}) {
+function showScreen(section, { morph = false, hidden = false } = {}) {
+  const tag = SCREENS[section];
+  if (!tag) return;
+
   site.hidden = false;
 
-  if (!site.querySelector('about-screen')) {
-    const screen = document.createElement('about-screen');
-    site.append(screen);
-
+  // Прошлый экран убираем сразу: держать оба в DOM незачем, а видео и канвасы
+  // на скрытом экране продолжали бы жрать кадры.
+  if (!site.querySelector(tag)) {
+    const screen = document.createElement(tag);
+    // При переходе с первого экрана раздел создаётся невидимым: его проявляют
+    // частицы по мере того, как садятся по местам его блоков.
+    if (hidden) screen.style.opacity = '0';
+    site.replaceChildren(screen);
     if (morph) morphIn(screen);
   }
 
@@ -82,19 +101,41 @@ function openAbout({ morph = false } = {}) {
     document.body.append(document.createElement('cursor-trail'));
   }
 
-  // При переходе через отрыв первый экран не убираем: он лежит поверх и
-  // растворяется сам, когда догорят частицы. А при прямом входе (?screen=about)
-  // никакой анимации нет, и его надо снять сразу — иначе он навсегда останется
-  // поверх раздела.
-  if (!morph) document.querySelector('hero-tear')?.remove();
+  // Первый экран убираем только при прямом входе (?screen=…), где никакой
+  // анимации нет и он бы навсегда остался поверх раздела.
+  //
+  // При переходе через отрыв его трогать нельзя: именно в нём живёт канвас с
+  // частицами, и удаление здесь уничтожало распад до того, как он начнётся.
+  // Экран снимет себя сам, когда частицы соберутся.
+  if (!morph && !hidden) document.querySelector('hero-tear')?.remove();
 }
+
+// Меню просит другой раздел — показываем его с тем же рваным морфом, что и
+// переход с первого экрана: смена раздела говорит на том же языке.
+document.addEventListener('navigate', (event) => {
+  showScreen(event.detail, { morph: true });
+});
 
 // Экраны переключаются целиком, без скролла между разделами: оторвали хлястик —
 // попали на «обо мне». Остальные разделы встанут сюда же по мере готовности.
-document.addEventListener('enter-site', () => openAbout({ morph: true }));
+// С первого экрана раздел не морфится, а собирается из частиц: фигура
+// рассыпается и складывается в блоки сайта. Проявлением управляет hero-tear.
+document.addEventListener('enter-site', () => showScreen('about', { hidden: true }));
 
 // Прямой вход для разработки и снятия скриншотов: ?screen=about пропускает
 // первый экран. Вместе с ?wx= это позволяет открыть любое состояние.
-if (new URLSearchParams(location.search).get('screen') === 'about') {
-  openAbout();
+const params = new URLSearchParams(location.search);
+const requested = params.get('screen');
+if (requested && SCREENS[requested]) {
+  showScreen(requested);
+}
+
+// ?tear=auto — отрывает хлястик сам. Нужно, чтобы смотреть переход, не дёргая
+// его руками каждый раз.
+if (params.get('tear') === 'auto') {
+  const hero = document.querySelector('hero-tear');
+  hero?.updateComplete.then(() => {
+    hero._paint(1);
+    hero._finishTear();
+  });
 }
