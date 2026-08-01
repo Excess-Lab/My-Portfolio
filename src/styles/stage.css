@@ -1,0 +1,361 @@
+/**
+ * Каркас внутренних разделов: кейсы и архив.
+ *
+ * Раздел живёт в той же сцене 1920×1080, что и «обо мне», и наследует её
+ * координаты: имя с языками в левом верхнем углу, меню слева, погода с видео
+ * города внизу. Меняется только содержимое правого поля — иначе переход между
+ * разделами читался бы как переход на другой сайт.
+ */
+
+/* ── Десктоп: сцена макета ────────────────────────────────────────────── */
+@media (min-width: 900px) and (min-aspect-ratio: 4 / 3) {
+  /* Поиск стоит в правом верхнем углу, зеркально имени: два якоря держат
+     верхнюю линию кадра. */
+  .find {
+    right: 20px;
+    top: 20px;
+    display: flex;
+    align-items: baseline;
+    gap: 0.06em;
+  }
+
+  .stage__feed {
+    left: 400px;
+    top: 178px;
+    width: 1500px;
+    height: 862px;
+  }
+
+  .cases {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 76px 60px;
+    padding-bottom: 80px;
+  }
+
+  .case {
+    display: grid;
+    grid-template-columns: 74px 1fr auto;
+    align-items: baseline;
+    gap: 14px 20px;
+  }
+
+  .case__index {
+    grid-row: 1 / span 3;
+  }
+
+  .case__frame {
+    grid-column: 2 / -1;
+  }
+
+  .case__name {
+    grid-column: 2;
+  }
+
+  .case__tag {
+    grid-column: 3;
+    text-align: right;
+  }
+
+  .case__text {
+    grid-column: 2 / -1;
+  }
+
+  /* Опись мыслей: дата держит левую колонку, название — основную, действие
+     прижато к правому краю поля. Строка читается слева направо как запись
+     в журнале. */
+  .idea__head {
+    display: grid;
+    grid-template-columns: 220px 1fr auto;
+    align-items: baseline;
+    gap: 20px;
+  }
+
+  .idea__inner {
+    padding-left: 240px;
+  }
+}
+
+/* ── Общее ───────────────────────────────────────────────────────────── */
+
+/* Поиск набран тем же языком, что языки в углу: слово в квадратных скобках.
+   Ни рамки, ни линейки, ни серой плашки — только текст, который растёт по мере
+   набора. */
+.find {
+  display: flex;
+  align-items: baseline;
+  gap: 0.06em;
+  cursor: text;
+  white-space: nowrap;
+}
+
+.find__bracket {
+  opacity: 0.85;
+}
+
+/* Ширину задаёт невидимый двойник текста в той же ячейке грида: поле ровно по
+   содержимому, без скачков и без замеров в JS. */
+.find__field {
+  display: inline-grid;
+  min-width: 1ch;
+}
+
+.find__field::after,
+.find__input {
+  grid-area: 1 / 1;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.find__field::after {
+  content: attr(data-value);
+  visibility: hidden;
+  white-space: pre;
+}
+
+.find__input {
+  width: 100%;
+  /* Без этого поле держит собственную ширину «по умолчанию» (около двадцати
+     знаков) и перебивает двойника: строка не сжималась под короткий запрос. */
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  outline: none;
+  font-style: italic;
+}
+
+.find__input::placeholder {
+  color: inherit;
+  opacity: 0.45;
+  font-style: normal;
+}
+
+.find__input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.stage__feed {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* Полоса прокрутки внутри масштабированной сцены выглядит инородно: ленту
+     листают колесом и жестом, край и так виден по обрезанной карточке. */
+  scrollbar-width: none;
+}
+
+.stage__feed::-webkit-scrollbar {
+  display: none;
+}
+
+.stage__empty {
+  margin: 0;
+  opacity: 0.5;
+}
+
+/* Заглушка закрытого раздела: та же типографика, что и везде, — раздел не
+   сломан, он просто ещё пишется. */
+.stage__draft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35em;
+}
+
+.stage__draft-title {
+  margin: 0;
+  font-style: italic;
+}
+
+.stage__draft-note {
+  margin: 0;
+  font-size: 0.52em;
+  line-height: 1.3;
+  opacity: 0.55;
+  max-width: 42ch;
+}
+
+/* ── Кейсы ───────────────────────────────────────────────────────────── */
+
+.case {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+}
+
+.case__index {
+  font-size: 0.42em;
+  letter-spacing: -0.02em;
+  opacity: 0.45;
+  font-variant-numeric: tabular-nums;
+}
+
+.case__frame {
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #d9d9d9;
+}
+
+.case__preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.25s ease;
+}
+
+.case--link:hover .case__preview {
+  opacity: 0.82;
+}
+
+.case--link:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: 8px;
+}
+
+.case__name {
+  display: block;
+}
+
+.case__tag {
+  font-size: 0.42em;
+  letter-spacing: -0.02em;
+  opacity: 0.5;
+  white-space: nowrap;
+}
+
+.case__text {
+  display: block;
+  font-size: 0.52em;
+  line-height: 1.3;
+  opacity: 0.8;
+  max-width: 54ch;
+}
+
+/* ── Архив идей ──────────────────────────────────────────────────────── */
+
+.idea {
+  padding: 22px 0;
+}
+
+.idea__head {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.idea__date,
+.idea__action {
+  font-size: 0.42em;
+  letter-spacing: -0.02em;
+  opacity: 0.45;
+  white-space: nowrap;
+}
+
+.idea__title {
+  transition: opacity 0.2s ease;
+}
+
+.idea__head:hover .idea__title {
+  opacity: 0.55;
+}
+
+/* Раскрытие через grid-template-rows: 0fr → 1fr. Высоту считает браузер по
+   реальному тексту, поэтому подгонять max-height не нужно. Работает только с
+   одним потомком — отсюда внутренняя обёртка. */
+.idea__body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.36s ease;
+}
+
+.idea[data-open='true'] .idea__body {
+  grid-template-rows: 1fr;
+}
+
+.idea__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.idea__text {
+  margin: 0.6em 0 0;
+  font-size: 0.52em;
+  line-height: 1.34;
+  opacity: 0.82;
+  max-width: 58ch;
+}
+
+/* ── Колонка: телефоны и окна, куда кадр макета не ложится ────────────── */
+@media (max-width: 899px), (max-aspect-ratio: 4 / 3) {
+  /* Поиск встаёт в поток под именем и языками — как ещё одна строка шапки. */
+  .find {
+    align-self: flex-start;
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .stage__feed {
+    overflow: visible;
+  }
+
+  .cases {
+    display: flex;
+    flex-direction: column;
+    gap: 44px;
+  }
+
+  .case {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 14px;
+  }
+
+  .case__index {
+    grid-row: 1 / span 2;
+  }
+
+  .case__frame {
+    grid-column: 1 / -1;
+    margin-bottom: 6px;
+  }
+
+  .case__name {
+    grid-column: 2;
+  }
+
+  .case__tag {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  .case__text {
+    grid-column: 1 / -1;
+  }
+
+  .idea {
+    padding: 18px 0;
+  }
+
+  /* В колонке дата и действие встают одной строкой над названием: держать
+     три колонки на такой ширине нечем. */
+  .idea__head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 16px;
+  }
+
+  .idea__title {
+    grid-column: 1 / -1;
+  }
+
+  .idea__action {
+    text-align: right;
+  }
+}

@@ -1,17 +1,12 @@
-import { LitElement, html } from 'lit';
+import { html } from 'lit';
 
-import { LOCALES, getLang, setLang, t, onLanguageChange } from '../i18n/index.js';
-import { fetchWeather } from '../lib/weather.js';
+import { t } from '../i18n/index.js';
 import { sortedIdeas } from '../data/ideas.js';
-import './weather-ambient.js';
-import './site-nav.js';
+import { StageScreen } from './stage-screen.js';
 
-/** Отладочный переключатель: ?wx=storm показывает нужную погоду. */
-function weatherOverride() {
-  const value = new URLSearchParams(location.search).get('wx');
-  const known = ['clear', 'sunny', 'cloudy', 'fog', 'rain', 'snow', 'storm'];
-  return known.includes(value) ? value : null;
-}
+// Раздел пока закрыт: открывается, но вместо ленты показывает, что он в
+// работе. Сама лента ниже готова — чтобы включить её, достаточно снять флаг.
+const IN_PROGRESS = true;
 
 /**
  * Архив идей: список мыслей, каждая раскрывается на месте.
@@ -20,51 +15,33 @@ function weatherOverride() {
  * название и текст. Мысль читают тут же, поэтому раскрытие идёт по месту, а не
  * уводит на отдельную страницу: архив листают, а не изучают по одной записи.
  */
-class ArchiveScreen extends LitElement {
-  createRenderRoot() {
-    return this;
-  }
-
+class ArchiveScreen extends StageScreen {
   static properties = {
-    lang: { state: true },
-    weather: { state: true },
-    query: { state: true },
+    ...StageScreen.properties,
     open: { state: true },
   };
 
   constructor() {
     super();
-    this.lang = getLang();
-    this.weather = null;
-    this.query = '';
+    this.section = 'archive';
     // Раскрытые мысли: сразу несколько, чтобы можно было сравнить соседние.
     this.open = new Set();
-    this._override = weatherOverride();
   }
 
-  connectedCallback() {
-    super.connectedCallback();
-    this._offLang = onLanguageChange(() => {
-      this.lang = getLang();
-    });
-    this._loadWeather();
+  get searchLabel() {
+    return t('searchIdeas');
   }
 
-  disconnectedCallback() {
-    this._offLang?.();
-    super.disconnectedCallback();
+  get hasSearch() {
+    return !IN_PROGRESS;
   }
 
-  async _loadWeather() {
-    if (this._override) {
-      this.weather = { condition: this._override };
-      return;
-    }
-    try {
-      this.weather = await fetchWeather();
-    } catch {
-      this.weather = null;
-    }
+  get searchCount() {
+    return `${this._found().length}`;
+  }
+
+  _found() {
+    return sortedIdeas().filter((idea) => this._matches(idea));
   }
 
   _field(value) {
@@ -75,14 +52,14 @@ class ArchiveScreen extends LitElement {
   /** Дата словами на языке сайта: «14 июля 2026», а не «2026-07-14». */
   _date(idea) {
     const locale = { ru: 'ru-RU', en: 'en-GB', sr: 'sr-RS' }[this.lang] ?? 'ru-RU';
-    return new Date(idea.date).toLocaleDateString(locale, {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
+    return (
+      new Date(idea.date)
+        .toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
+        // Русская локаль добавляет «г.» — в макете таких сокращений нет.
+        .replace(/\s*г\.$/, '')
+    );
   }
 
-  /** Поиск по словам — как в кейсах, сразу по всем переводам и по дате. */
   _matches(idea) {
     const words = this.query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (!words.length) return true;
@@ -109,92 +86,53 @@ class ArchiveScreen extends LitElement {
     this.open = next;
   }
 
-  _langButtons() {
-    return LOCALES.map(
-      (locale) => html`
-        <button
-          type="button"
-          lang=${locale.htmlLang}
-          @click=${() => setLang(locale.code)}
-          aria-current=${this.lang === locale.code ? 'true' : 'false'}
-          class="cursor-pointer bg-transparent p-0 font-serif tracking-[inherit] whitespace-nowrap transition-opacity hover:opacity-60 ${this
-            .lang === locale.code
-            ? 'italic'
-            : ''}"
-          style="font-size: inherit; color: inherit;"
-        >
-          [${locale.label}]
-        </button>
-      `,
-    );
-  }
-
   _idea(idea) {
     const open = this.open.has(idea.id);
 
     return html`
-      <article class="ideas__item" data-open=${open ? 'true' : 'false'}>
+      <article class="idea" data-open=${open ? 'true' : 'false'}>
         <button
           type="button"
-          class="ideas__head"
+          class="idea__head"
           aria-expanded=${open ? 'true' : 'false'}
           @click=${() => this._toggle(idea.id)}
         >
-          <span class="ideas__date">${this._date(idea)}</span>
-          <span class="ideas__title">${this._field(idea.title)}</span>
-          <span class="ideas__action">${open ? t('ideaHide') : t('ideaRead')}</span>
+          <span class="idea__date">${this._date(idea)}</span>
+          <span class="idea__title">${this._field(idea.title)}</span>
+          <span class="idea__action">${open ? t('ideaHide') : t('ideaRead')}</span>
         </button>
 
         <!-- Раскрытие через grid-template-rows: высота считается по реальному
              тексту, без подгонки max-height на глаз. Потомок ровно один. -->
-        <div class="ideas__body">
-          <div class="ideas__inner">
+        <div class="idea__body">
+          <div class="idea__inner">
             ${this._field(idea.text)
               .split(/\n\s*\n/)
-              .map((paragraph) => html`<p class="ideas__text">${paragraph}</p>`)}
+              .map((paragraph) => html`<p class="idea__text">${paragraph}</p>`)}
           </div>
         </div>
       </article>
     `;
   }
 
-  render() {
-    const found = sortedIdeas().filter((idea) => this._matches(idea));
+  renderContent() {
+    if (IN_PROGRESS) {
+      return html`
+        <div class="stage__draft">
+          <p class="stage__draft-title">${t('draftTitle')}</p>
+          <p class="stage__draft-note">${t('draftNote')}</p>
+        </div>
+      `;
+    }
+
+    const found = this._found();
 
     return html`
-      <weather-ambient condition=${this.weather?.condition ?? 'none'}></weather-ambient>
-
-      <site-nav where="overlay" current="archive"></site-nav>
-
-      <section class="about cases ideas">
-        <div class="cases__head">
-          <div class="about__corner rough">
-            <div>${t('name')}</div>
-            <div class="about__role">${t('role')}</div>
-            <div class="about__langs">${this._langButtons()}</div>
-          </div>
-
-          <div class="cases__search rough">
-            <input
-              type="search"
-              class="cases__input"
-              .value=${this.query}
-              placeholder=${t('searchIdeas')}
-              aria-label=${t('searchIdeas')}
-              @input=${(event) => {
-                this.query = event.target.value;
-              }}
-            />
-            <span class="cases__count">${found.length} ${t('ideasCount')}</span>
-          </div>
-        </div>
-
-        <div class="ideas__feed rough">
-          ${found.length
-            ? found.map((idea) => this._idea(idea))
-            : html`<p class="cases__empty">${t('searchEmpty')}</p>`}
-        </div>
-      </section>
+      <div class="ideas">
+        ${found.length
+          ? found.map((idea) => this._idea(idea))
+          : html`<p class="stage__empty">${t('searchEmpty')}</p>`}
+      </div>
     `;
   }
 }

@@ -15,14 +15,30 @@
     display: none;
   }
 
+  /* Пять строк — по одной на раздел, закреплённой навсегда. Пункт стоит в
+     своей строке независимо от того, какой раздел открыт: меняется только
+     выравнивание. */
   .site-nav {
     position: absolute;
     left: 18px;
     top: 444px;
     width: 362px;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-auto-rows: min-content;
+    row-gap: 5px;
+  }
+
+  /* Обёртки нужны телефону для раскрытия; на десктопе они прозрачны для
+     раскладки, чтобы пункты попали прямо в сетку меню и встали по строкам. */
+  .site-nav__rest,
+  .site-nav__list {
+    display: contents;
   }
 
   .site-nav__current {
+    grid-row: var(--row, 1);
+    justify-self: start;
     display: inline-flex;
     align-items: center;
     padding: 0;
@@ -44,20 +60,9 @@
     margin-right: -13px;
   }
 
-  .site-nav__rest,
-  .site-nav__list {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 5px;
-    width: 362px;
-  }
-
-  .site-nav__rest {
-    margin-top: 6px;
-  }
-
   .site-nav__item {
+    grid-row: var(--row, auto);
+    justify-self: end;
     background: none;
     padding: 0;
     font: inherit;
