@@ -12,23 +12,24 @@ gsap.registerPlugin(Draggable, InertiaPlugin);
 // Геометрия ленты. Всё в долях ширины колонки, поэтому на телефоне барабан
 // просто становится меньше, а не разъезжается.
 const CARD_H = 0.62;
-// Шаг по дуге много меньше карточки: как в макете, каждая следующая закрывает
-// предыдущую почти целиком, и от дальних остаётся только узкая полоса.
-const STEP = CARD_H * 0.42;
-// Радиус барабана в высотах карточки и глубина перспективы в радиусах. Вдвоём
-// они и решают, насколько круто карточки заваливаются к краям.
-const RADIUS = 1.45;
-const DEPTH = 1.15;
-// Дальше этого угла карточка уже смотрит ребром — её незачем показывать.
-const EDGE = 1.45;
+// Шаг стопки у нижнего края. Выше каждая карточка и её шаг умножаются на FADE,
+// поэтому лента сходится кверху в точку схода — перспектива, а не барабан:
+// карточки остаются фронтальными, и то, что на них, не косит.
+const STEP = CARD_H * 0.3;
+const FADE = 0.945;
+// Сколько карточек стопка держит в запасе сверху и снизу от экрана.
+const SPAN = 12;
 
 // Скорость самохода: в макете лента проезжает 4346px за 30 секунд.
 const AUTO = 4346 / 30 / 732;
 
-// Насколько карточка выходит вперёд под курсором (в высотах карточки) и
-// насколько при этом выпрямляется.
-const LIFT = 0.42;
-const STRAIGHTEN = 0.55;
+// Время, за которое лента съедает основную часть пути до цели.
+const EASE = 0.16;
+
+// Под курсором карточка раскрывается в полный размер — какой бы мелкой её ни
+// сделала перспектива. Это и есть «раскрыть»: не подрасти на процент, а выйти
+// из стопки целиком.
+const OPEN = 1;
 
 // Нижняя строка макета. ready — раздел, который уже есть на сайте: остальные
 // подписи стоят неактивными, чтобы строка совпадала с макетом целиком.
@@ -57,12 +58,12 @@ class HomeScreen extends LitElement {
     this.copies = HomeScreen.fitCopies();
     this._rail = createRef();
     this._track = createRef();
-    // Позиция ленты в пикселях. Всё движение — драг, колесо, самоход —
-    // сводится к ней, поэтому источник правды один и швов на стыке нет.
+    // Две величины вместо физики с трением: _goal — куда ленту просят приехать,
+    // _y — где она сейчас. Каждый кадр _y подтягивается к _goal на одну и ту же
+    // долю оставшегося пути, поэтому любой толчок — колесом, самоходом или
+    // рукой — въезжает в одно и то же плавное движение, и они не дерутся.
     this._y = 0;
-    // Скорость от колеса: гасится трением, поэтому бросок колесом докатывается,
-    // а не останавливается в тот же кадр.
-    this._spin = 0;
+    this._goal = 0;
     this._held = false;
   }
 
@@ -112,16 +113,13 @@ class HomeScreen extends LitElement {
     this._height = rail.clientHeight;
     this._step = this._width * STEP;
     this._card = this._width * CARD_H;
-    this._radius = this._card * RADIUS;
-    // Перспектива — доля радиуса, поэтому крутизна завала одна и та же на любом
-    // экране: меняется размер барабана, а не его характер.
-    rail.style.perspective = `${(this._radius * DEPTH).toFixed(1)}px`;
-    // Ось барабана отодвинута назад на радиус: центральная карточка выходит
-    // в плоскость экрана и видна в натуральную величину, а не раздутой.
-    this._track.value.style.transform = `translateZ(${-this._radius.toFixed(1)}px)`;
     // Период цикла: сдвиг на весь набор возвращает ленту в себя же.
     this._period = this._step * CASES.length;
     this._slabs = [...rail.querySelectorAll('.slab')];
+    this._slabs.forEach((slab, i) => {
+      slab.shade = slab.querySelector('.slab__shade');
+      slab.index = i;
+    });
 
     this._draw();
   }
@@ -132,10 +130,9 @@ class HomeScreen extends LitElement {
    * минимальным, значит копий — с запасом, какой бы ни была вёрстка.
    */
   static fitCopies() {
-    // Видимая часть барабана — дуга ±EDGE радиан плюс одна карточка на краю.
-    // Ширина колонки сокращается, поэтому число копий от окна не зависит.
-    const arc = 2 * EDGE * RADIUS * CARD_H + CARD_H;
-    return Math.max(2, Math.ceil(arc / (STEP * CASES.length)) + 1);
+    // Стопка живёт в полосе шириной SPAN карточек — больше копий ни при каком
+    // окне не понадобится, потому что дальние ужимаются, а не уезжают.
+    return Math.max(2, Math.ceil(SPAN / CASES.length) + 1);
   }
 
   _setupDrag() {
@@ -152,17 +149,18 @@ class HomeScreen extends LitElement {
       allowNativeTouchScrolling: false,
       onPress: () => {
         this._held = true;
-        this._spin = 0;
         start.y = this._y;
         gsap.set(proxy, { y: 0 });
         this._drag.update();
       },
       onDrag: () => {
         this._y = start.y + this._drag.y;
+        this._goal = this._y;
         this._draw();
       },
       onThrowUpdate: () => {
         this._y = start.y + this._drag.y;
+        this._goal = this._y;
         this._draw();
       },
       onRelease: () => {
@@ -179,8 +177,25 @@ class HomeScreen extends LitElement {
       // Колесо перебивает докатывание броска: иначе две силы тянули бы ленту.
       if (this._drag.isThrowing) this._drag.tween?.kill();
       this._held = false;
-      this._spin -= event.deltaY * 1.6;
+
+      // deltaMode: 0 — пиксели (трекпад и большинство мышей), 1 — строки,
+      // 2 — страницы. Без приведения строчное колесо двигало ленту в сотню раз
+      // слабее пиксельного, и казалось, что оно не работает.
+      const px = event.deltaMode === 1
+        ? event.deltaY * 16
+        : event.deltaMode === 2
+          ? event.deltaY * this._height
+          : event.deltaY;
+
+      // Один щелчок мыши (100px) — одна карточка. Трекпад шлёт мелкие дельты
+      // и набирает тот же путь плавно, поэтому отдельный режим ему не нужен.
+      this._goal -= (px / 100) * this._step;
+      // Дальше шести карточек вперёд не забегаем: иначе быстрая прокрутка
+      // копит путь на секунды вперёд и лента едет уже без тебя.
+      const span = this._step * 6;
+      this._goal = Math.max(this._y - span, Math.min(this._y + span, this._goal));
     };
+
     this._rail.value?.addEventListener('wheel', this._onWheel, { passive: false });
   }
 
@@ -191,22 +206,21 @@ class HomeScreen extends LitElement {
     this._still = Boolean(slab);
   }
 
-  /** Кадр самохода и докатывания колеса. */
+  /** Кадр: самоход двигает цель, лента её догоняет. */
   _advance(dt) {
     if (!this._rail.value) return;
 
-    if (this._spin) {
-      this._y += this._spin * dt;
-      // Трение, не зависящее от частоты кадров: на 120 Гц докат той же длины.
-      this._spin *= Math.pow(0.03, dt);
-      if (Math.abs(this._spin) < 1) this._spin = 0;
+    if (this._held) {
+      // Рука и инерция ведут ленту напрямую — догонять нечего.
+      this._goal = this._y;
+    } else {
+      if (!this._still) this._goal -= AUTO * this._width * dt;
+      // Доля пути за кадр, не зависящая от частоты кадров: на 60 и на 120 Гц
+      // лента доезжает за одно и то же время.
+      this._y += (this._goal - this._y) * (1 - Math.exp(-dt / EASE));
     }
 
-    if (!this._held && !this._spin && !this._still) {
-      this._y -= AUTO * this._rail.value.clientWidth * dt;
-    }
-
-    this._draw();
+    this._draw(dt);
   }
 
   /**
@@ -220,13 +234,18 @@ class HomeScreen extends LitElement {
     const wrapped = (((this._y % this._period) + this._period) % this._period)
       - this._period;
 
-    this._slabs.forEach((slab, index) => {
-      // Путь по дуге от верхнего края окна до середины карточки.
-      const arc = index * this._step + wrapped + this._card / 2;
-      // Угол на барабане: 0 — карточка смотрит прямо на зрителя, дальше она
-      // заваливается назад. Отсюда берутся и наклон, и сжатие, и трапеция —
-      // всё это настоящая перспектива, а не нарисованный скос.
-      const angle = -(arc - this._height / 2) / this._radius;
+    this._slabs.forEach((slab) => {
+      // Номер карточки в стопке, считая от нижнего края окна и вверх. Дробный:
+      // лента едет непрерывно, и карточка плавно переползает со ступени на
+      // ступень, а не перескакивает.
+      const flat = slab.index * this._step + wrapped;
+      const rank = (this._height - flat) / this._step;
+
+      // Геометрическая перспектива: каждая ступень вверх умножает и размер
+      // карточки, и её шаг на FADE. Сумма шагов — ряд, который сходится, и
+      // кверху стопка упирается в точку схода, как на натуре.
+      const scale = Math.pow(FADE, rank);
+      const y = this._height - (this._step * (1 - scale)) / (1 - FADE);
 
       // Подъём под курсором догоняет цель плавно и независимо от частоты
       // кадров, поэтому карточка выходит вперёд, а не прыгает.
@@ -234,17 +253,22 @@ class HomeScreen extends LitElement {
       const lift = (slab.lift ?? 0) + (target - (slab.lift ?? 0)) * (1 - Math.exp(-dt * 12));
       slab.lift = Math.abs(lift - target) < 0.001 ? target : lift;
 
-      const far = Math.abs(angle) > EDGE;
-      slab.style.opacity = far ? '0' : '1';
-      slab.style.pointerEvents = far ? 'none' : 'auto';
+      const far = scale < 0.1 || y > this._height + this._card || y < -this._card * scale;
+      slab.style.visibility = far ? 'hidden' : 'visible';
       if (far) return;
 
-      const tilt = angle * (1 - STRAIGHTEN * slab.lift);
-      const depth = this._radius + this._card * LIFT * slab.lift;
-      slab.style.transform = `rotateX(${tilt.toFixed(4)}rad) translateZ(${depth.toFixed(1)}px)`;
+      // Раскрытие тянет масштаб к натуральному, а не умножает текущий: мелкая
+      // карточка из глубины открывается так же полно, как ближняя.
+      const grow = scale + (OPEN - scale) * slab.lift;
+      // Растёт она от верхней кромки, поэтому середину удерживаем сами —
+      // иначе раскрытая карточка сползала бы вниз из-под курсора.
+      const hold = y - (this._card * (grow - scale)) / 2;
+      slab.style.transform = `translate3d(0, ${hold.toFixed(2)}px, 0) scale(${grow.toFixed(4)})`;
+      // Ближняя карточка кроет дальнюю, как в стопке. Та, что под курсором,
+      // выходит поверх всех — только так её видно целиком, а не полосой.
+      slab.style.zIndex = slab.lift > 0.5 ? 9999 : Math.round(1000 - rank * 10);
       // Ушедшее вдаль темнеет; то, что под курсором, возвращается к свету.
-      const shade = 1 - 0.3 * (1 - Math.cos(angle)) * (1 - slab.lift);
-      slab.style.filter = `brightness(${shade.toFixed(3)})`;
+      slab.shade.style.opacity = (0.25 * (1 - scale) * (1 - slab.lift)).toFixed(3);
     });
   }
 
@@ -282,7 +306,7 @@ class HomeScreen extends LitElement {
   _slab(item, index) {
     // Подписи на карточках нет: лента читается как поток работ, название
     // живёт в самом превью.
-    const inner = this._preview(item);
+    const inner = html`${this._preview(item)}<span class="slab__shade"></span>`;
 
     // Позицию карточке задаёт барабан в _draw: здесь только её место в ленте.
     const style = `--i: ${index}`;

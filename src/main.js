@@ -130,6 +130,9 @@ const params = new URLSearchParams(location.search);
 const requested = params.get('screen');
 if (requested && SCREENS[requested]) {
   showScreen(requested);
+} else if (!document.querySelector('hero-tear')) {
+  // Первого экрана в разметке нет — значит заходить некуда, кроме главной.
+  showScreen('home');
 }
 
 // ?tear=auto — отрывает хлястик сам. Нужно, чтобы смотреть переход, не дёргая

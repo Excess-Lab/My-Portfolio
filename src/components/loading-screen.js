@@ -148,6 +148,24 @@ class LoadingScreen extends LitElement {
 
     return html`
       <div ${ref(this.rootRef)} class="loader">
+        <!-- Ролик один на весь экран. Десять отдельных <video> браузер
+             отказывался проигрывать разом, да и кадры в них разъезжались:
+             полосы — это шторы поверх одного ролика, а не десять копий. -->
+        <video
+          class="loader__video"
+          src="video/loader.webm"
+          autoplay
+          muted
+          loop
+          playsinline
+          preload="auto"
+          @loadedmetadata=${(event) => {
+            // Первые секунды ролика почти чёрные, а заставка живёт три секунды:
+            // стартуем со светлой фазы, иначе кажется, что видео не играет.
+            event.currentTarget.currentTime = 5.5;
+          }}
+        ></video>
+
         <div class="loader__cols">
           ${COLUMNS.map(
             (width, index) => html`
@@ -155,20 +173,7 @@ class LoadingScreen extends LitElement {
                 class="loader__col"
                 data-on=${index < shown ? 'true' : 'false'}
                 style="--w: ${(width / total) * 100}%; --i: ${index}"
-              >
-                <!-- Видео во всю ширину экрана, сдвинутое на место колонны:
-                     все полосы показывают один и тот же кадр одного ролика. -->
-                <video
-                  class="loader__video"
-                  src="video/loader.webm"
-                  autoplay
-                  muted
-                  loop
-                  playsinline
-                  preload="auto"
-                  style="--shift: ${(COLUMNS.slice(0, index).reduce((s, w) => s + w, 0) / total) * 100}"
-                ></video>
-              </div>
+              ></div>
             `,
           )}
         </div>

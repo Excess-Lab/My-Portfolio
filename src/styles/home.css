@@ -56,9 +56,13 @@ home-screen {
   right: 0;
   height: 420px;
   pointer-events: none;
+  /* Дымка размывает только шапку и лежит ПОД лентой: карточки должны
+     оставаться резкими до самого верха стопки. */
+  z-index: 0;
 }
 
-/* Размытие нарастает сверху вниз. Одним слоем так нельзя: backdrop-filter
+/* Размытие гуще всего у верхней кромки и сходит на нет к низу: шапка и верх
+   ленты тают в белом, а карточки будто выплывают из этой дымки. Одним слоем так нельзя: backdrop-filter
    не умеет градиент силы, поэтому слабое и сильное лежат друг на друге, а
    маски делают переход между ними незаметным. */
 .home__haze::before,
@@ -71,8 +75,8 @@ home-screen {
 .home__haze::before {
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 38%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 38%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
 }
 
 .home__haze::after {
@@ -83,8 +87,8 @@ home-screen {
     rgba(255, 255, 255, 0) 0%,
     rgba(255, 255, 255, 0.2) 57.665%
   );
-  mask-image: linear-gradient(to bottom, transparent 22%, #000 62%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 22%, #000 62%);
+  mask-image: linear-gradient(to bottom, #000 0%, #000 20%, transparent 58%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 20%, transparent 58%);
 }
 
 /* ── подписи по углам ────────────────────────────────────────────────────── */
@@ -100,6 +104,7 @@ home-screen {
   gap: 24px;
   color: #ffffff;
   mix-blend-mode: difference;
+  z-index: 4;
 }
 
 .home__who {
@@ -159,6 +164,7 @@ home-screen {
   align-items: center;
   gap: 50px;
   color: #ffffff;
+  z-index: 4;
   /* Наложением, как подписи в шапке: строка проступает поверх ленты и темнеет
      на светлых карточках, вместо того чтобы лечь на них глухой плашкой. */
   mix-blend-mode: difference;
@@ -187,9 +193,7 @@ home-screen {
   container-type: inline-size;
   touch-action: none;
   cursor: grab;
-  /* perspective ставит компонент: она зависит от радиуса барабана, а он — от
-     ширины колонки. perspective-origin в середине, иначе барабан смотрит вбок. */
-  perspective-origin: 50% 50%;
+  z-index: 1;
 }
 
 .home__rail:active {
@@ -199,23 +203,18 @@ home-screen {
 .home__track {
   position: absolute;
   inset: 0;
-  /* Карточки стоят в одном 3D-пространстве: браузер сам решает, какая ближе,
-     поэтому ни z-index, ни порядок в разметке больше ничего не решают. */
-  transform-style: preserve-3d;
 }
 
-/* Карточка — плоская пластина на боку барабана. Трапеция, сжатие по вертикали
-   и наклон не нарисованы, а получаются из поворота: это одна и та же
-   перспектива, что в макете, только настоящая. */
+/* Карточка — ступень стопки. Она всегда смотрит прямо на зрителя: в перспективу
+   её уводит только размер и шаг, поэтому обложка не косит и читается. */
 .slab {
   position: absolute;
   left: 0;
   width: 100%;
   height: 62cqw;
-  top: 50%;
-  margin-top: -31cqw;
-  transform-origin: 50% 50%;
-  backface-visibility: hidden;
+  top: 0;
+  /* Позиция — координата верхней кромки, от неё же и масштабируем. */
+  transform-origin: 50% 0;
   will-change: transform;
   overflow: hidden;
   background: #eaeaea;
@@ -223,7 +222,15 @@ home-screen {
   color: #ffffff;
   user-select: none;
   -webkit-user-drag: none;
-  transition: opacity 0.25s ease;
+}
+
+/* Глубина: чем дальше карточка завалилась, тем плотнее тень. */
+.slab__shade {
+  position: absolute;
+  inset: 0;
+  background: #000000;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .slab__media {
