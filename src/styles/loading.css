@@ -32,14 +32,45 @@
   height: 100%;
   overflow: hidden;
   background: #111;
-  /* Полоса выезжает снизу: пока её очередь не пришла, она за кадром. */
-  transform: translateY(102%);
-  transition: transform 0.72s cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: calc(var(--i) * 0.015s);
+  /* Полосы стоят на месте, как в макете: приходит не форма, а изображение.
+     Невыданная полоса просто пуста — отсюда обрезка по высоте, а не выезд. */
+  clip-path: inset(100% 0 0 0);
+  transition: clip-path 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--i) * 0.04s);
 }
 
 .loader__col[data-on='true'] {
-  transform: translateY(0);
+  clip-path: inset(0 0 0 0);
+}
+
+/* Переливание: по каждой полосе идёт световая волна — то самое, что в макете
+   делает анимированная карта градиента. Полосы вступают вразнобой, поэтому
+   свет не идёт строем. */
+.loader__col::after {
+  content: '';
+  position: absolute;
+  inset: -20% 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.5) 42%,
+    rgba(255, 255, 255, 0.85) 50%,
+    rgba(255, 255, 255, 0.5) 58%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  mix-blend-mode: overlay;
+  animation: loader-sweep 2.6s linear infinite;
+  animation-delay: calc(var(--i) * -0.26s);
+  pointer-events: none;
+}
+
+@keyframes loader-sweep {
+  from {
+    transform: translateY(-110%);
+  }
+  to {
+    transform: translateY(110%);
+  }
 }
 
 /* Ролик растянут на весь экран и сдвинут на место своей колонны: все полосы

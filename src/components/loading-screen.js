@@ -117,17 +117,20 @@ class LoadingScreen extends LitElement {
     // Страховка: уход построен на кадрах, а в фоновой вкладке их не выдают —
     // заставка так и осталась бы лежать поверх сайта. По времени снимаем её
     // в любом случае.
-    this._bail = setTimeout(() => this.remove(), 1600);
+    this._bail = setTimeout(() => this.remove(), 2000);
     gsap
       .timeline({ onComplete: () => this.remove() })
+      // Полосы уходят через одну вверх и вниз, открывая первый экран. Сам
+      // экран уже стоит под ними, поэтому видно не затухание заставки, а то,
+      // как сайт проступает в раздвинутые щели.
       .to(bars, {
-        yPercent: (i) => (i % 2 ? 115 : -115),
-        duration: 0.85,
-        ease: 'power3.inOut',
-        stagger: { each: 0.035, from: 'center' },
+        yPercent: (i) => (i % 2 ? 118 : -118),
+        duration: 1,
+        ease: 'power4.inOut',
+        stagger: { each: 0.05, from: 'center' },
       })
-      .to(this.querySelector('.loader__percent'), { opacity: 0, duration: 0.3 }, 0)
-      .set(this, { opacity: 0 });
+      .to(this.querySelector('.loader__percent'), { opacity: 0, duration: 0.25 }, 0)
+      .to(this.querySelector('.loader'), { backgroundColor: 'rgba(255,255,255,0)', duration: 0.6 }, 0.3);
   }
 
   render() {
