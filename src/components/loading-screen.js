@@ -113,6 +113,10 @@ class LoadingScreen extends LitElement {
     // Полосы расходятся вверх-вниз через одну и уводят за собой заставку:
     // кадр не гаснет, а раскрывается.
     const bars = [...this.querySelectorAll('.loader__col')];
+    const cols = this.querySelector('.loader__cols');
+    const alpha = document.querySelector('#loader-dissolve-a');
+    const grain = { v: 0 };
+    if (cols && alpha) cols.style.filter = 'url(#loader-dissolve)';
 
     // Страховка: уход построен на кадрах, а в фоновой вкладке их не выдают —
     // заставка так и осталась бы лежать поверх сайта. По времени снимаем её
@@ -123,12 +127,15 @@ class LoadingScreen extends LitElement {
       // Полосы уходят через одну вверх и вниз, открывая первый экран. Сам
       // экран уже стоит под ними, поэтому видно не затухание заставки, а то,
       // как сайт проступает в раздвинутые щели.
-      .to(bars, {
-        yPercent: (i) => (i % 2 ? 118 : -118),
-        duration: 1,
-        ease: 'power4.inOut',
-        stagger: { each: 0.05, from: 'center' },
+      // Полосы осыпаются крупой: порог шумовой маски уползает, и изображение
+      // распадается на частицы, а не гаснет целиком.
+      .to(grain, {
+        v: -6,
+        duration: 1.1,
+        ease: 'power2.in',
+        onUpdate: () => alpha?.setAttribute('intercept', grain.v.toFixed(2)),
       })
+      .to(bars, { opacity: 0, duration: 0.5, ease: 'power2.in' }, 0.5)
       .to(this.querySelector('.loader__percent'), { opacity: 0, duration: 0.25 }, 0)
       .to(this.querySelector('.loader'), { backgroundColor: 'rgba(255,255,255,0)', duration: 0.6 }, 0.3);
   }
@@ -153,7 +160,7 @@ class LoadingScreen extends LitElement {
                      все полосы показывают один и тот же кадр одного ролика. -->
                 <video
                   class="loader__video"
-                  src="video/about-1.mp4"
+                  src="video/loader.webm"
                   autoplay
                   muted
                   loop

@@ -53,6 +53,18 @@
       </filter>
     </svg>
 
+    <!-- Распад заставки: шум превращается в маску, порог которой уводит JS —
+         полосы осыпаются крупой, а не гаснут целиком. -->
+    <svg width="0" height="0" aria-hidden="true" style="position: absolute">
+      <filter id="loader-dissolve">
+        <feTurbulence type="fractalNoise" baseFrequency="0.62" numOctaves="1" result="noise" />
+        <feComponentTransfer in="noise" result="mask">
+          <feFuncA id="loader-dissolve-a" type="linear" slope="6" intercept="0" />
+        </feComponentTransfer>
+        <feComposite in="SourceGraphic" in2="mask" operator="in" />
+      </filter>
+    </svg>
+
     <loading-screen></loading-screen>
     <hero-tear></hero-tear>
 

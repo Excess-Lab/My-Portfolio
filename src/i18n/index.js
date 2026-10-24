@@ -44,6 +44,11 @@ const dict = {
     search: 'поиск по проектам',
     searchEmpty: 'ничего не нашлось',
     casesCount: 'проектов',
+    home: 'главная',
+    homeProducts: 'продукты',
+    homePhotos: 'фотографии',
+    homeGraveyard: 'кладбище идей',
+    homeWrite: 'написать мне',
   },
   en: {
     name: 'makar kabanov',
@@ -78,6 +83,11 @@ const dict = {
     search: 'search projects',
     searchEmpty: 'nothing found',
     casesCount: 'projects',
+    home: 'home',
+    homeProducts: 'products',
+    homePhotos: 'photos',
+    homeGraveyard: 'graveyard of ideas',
+    homeWrite: 'write to me',
   },
   sr: {
     name: 'макар кабанов',
@@ -112,6 +122,11 @@ const dict = {
     search: 'претрага пројеката',
     searchEmpty: 'ништа није нађено',
     casesCount: 'пројеката',
+    home: 'почетна',
+    homeProducts: 'производи',
+    homePhotos: 'фотографије',
+    homeGraveyard: 'гробље идеја',
+    homeWrite: 'пиши ми',
   },
 };
 

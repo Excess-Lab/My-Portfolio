@@ -5,10 +5,12 @@ import './styles/about.css';
 import './styles/nav.css';
 import './styles/stage.css';
 import './styles/loading.css';
+import './styles/home.css';
 import './components/loading-screen.js';
 import './components/hero-tear.js';
 import './components/about-screen.js';
 import './components/cases-screen.js';
+import './components/home-screen.js';
 import './components/cursor-trail.js';
 
 const site = document.querySelector('#site');
@@ -70,6 +72,7 @@ function morphIn(screen) {
 
 // Разделы: ключ меню → тег экрана. Новый раздел добавляется одной строкой.
 const SCREENS = {
+  home: 'home-screen',
   about: 'about-screen',
   cases: 'cases-screen',
 };

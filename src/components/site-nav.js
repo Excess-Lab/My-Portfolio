@@ -16,10 +16,10 @@ import starIcon from '../assets/star.svg';
  * ничего знать про меню, а меню — про экран.
  */
 
-export const SECTIONS = ['about', 'cases', 'archive', 'gallery', 'contacts'];
+export const SECTIONS = ['home', 'about', 'cases', 'archive', 'gallery', 'contacts'];
 
 // Разделы, которые уже сверстаны. Остальные показываем приглушёнными.
-export const READY = new Set(['about', 'cases']);
+export const READY = new Set(['home', 'about', 'cases']);
 
 class SiteNav extends LitElement {
   createRenderRoot() {

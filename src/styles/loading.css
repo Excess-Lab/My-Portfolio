@@ -16,14 +16,11 @@
 
 .loader__cols {
   position: absolute;
-  /* Запас по краям: наклон съедает углы, без него по бокам светила бы белая
-     щель. */
-  left: -6%;
-  top: -8%;
-  width: 112%;
-  height: 116%;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
   display: flex;
-  transform: rotate(-2.4deg);
 }
 
 .loader__col {
@@ -79,8 +76,8 @@
 .loader__video {
   position: absolute;
   top: 0;
-  left: calc(var(--shift) * -1.12vw);
-  width: 112vw;
+  left: calc(var(--shift) * -1vw);
+  width: 100vw;
   height: 100%;
   max-width: none;
   object-fit: cover;

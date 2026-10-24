@@ -1,0 +1,286 @@
+/**
+ * Главная. Макет 1920×1080, но экран не масштабируется целиком, как «обо мне»:
+ * колонка карусели в макете стоит ровно по центру кадра, шапка тянется во всю
+ * ширину, а подписи прижаты к краям на 50px. Поэтому раскладка резиновая —
+ * на широком мониторе она совпадает с макетом пиксель в пиксель, а на узком
+ * ужимается колонка, а не весь кадр.
+ */
+
+home-screen {
+  display: block;
+  height: 100%;
+}
+
+.home {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #ffffff;
+  font-family: 'Martian Mono', ui-monospace, monospace;
+  font-size: 15px;
+  font-variation-settings: 'wdth' 100;
+  line-height: normal;
+  word-break: break-word;
+}
+
+/* ── шапка ───────────────────────────────────────────────────────────────── */
+
+/* Полоса в макете всегда 1920px и обрезается по краям окна, поэтому видео не
+   растягивается под ширину экрана, а подрезается — зерно остаётся того же
+   размера, каким его свели в макете. */
+.home__band {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1920px;
+  height: 193px;
+  transform: translateX(-50%);
+  overflow: hidden;
+  background: #f9f9f9;
+}
+
+.home__band-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Размытие во всю страницу: оно съедает шапку снизу вверх и растворяет её в
+   белом. Карусель лежит выше по стопке и остаётся резкой — так же, как в
+   макете, где лента нарисована поверх этого слоя. */
+.home__haze {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 420px;
+  pointer-events: none;
+}
+
+/* Размытие нарастает сверху вниз. Одним слоем так нельзя: backdrop-filter
+   не умеет градиент силы, поэтому слабое и сильное лежат друг на друге, а
+   маски делают переход между ними незаметным. */
+.home__haze::before,
+.home__haze::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.home__haze::before {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 38%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 38%);
+}
+
+.home__haze::after {
+  backdrop-filter: blur(50px);
+  -webkit-backdrop-filter: blur(50px);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.2) 57.665%
+  );
+  mask-image: linear-gradient(to bottom, transparent 22%, #000 62%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 22%, #000 62%);
+}
+
+/* ── подписи по углам ────────────────────────────────────────────────────── */
+
+/* mix-blend-difference из макета: на тёмной шапке подпись белая, на белом
+   листе — чёрная, и ни одной лишней краски. */
+.home__meta {
+  position: absolute;
+  inset: 50px 50px auto 50px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  color: #ffffff;
+  mix-blend-mode: difference;
+}
+
+.home__who {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.home__langs {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  /* Строка языков в макете стоит на 9px ниже первой строки имени. */
+  padding-top: 9px;
+}
+
+.home__lang,
+.home__link {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.2s ease;
+}
+
+.home__lang:hover,
+.home__link:not(:disabled):hover {
+  opacity: 0.6;
+}
+
+.home__link:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+/* ── нижняя строка ───────────────────────────────────────────────────────── */
+
+.home__links {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 50px;
+  color: #ffffff;
+  /* Наложением, как подписи в шапке: строка проступает поверх ленты и темнеет
+     на светлых карточках, вместо того чтобы лечь на них глухой плашкой. */
+  mix-blend-mode: difference;
+}
+
+.home__filters {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* ── карусель ────────────────────────────────────────────────────────────── */
+
+/* Колонка — контейнер запроса: все размеры внутри заданы в cqw, то есть долями
+   её ширины. Одна правка ширины колонки — и трапеция, нахлёст и типографика
+   переезжают вместе с ней, без второго набора чисел для телефона. */
+.home__rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 732px;
+  max-width: calc(100vw - 32px);
+  transform: translateX(-50%);
+  overflow: hidden;
+  container-type: inline-size;
+  touch-action: none;
+  cursor: grab;
+  /* perspective ставит компонент: она зависит от радиуса барабана, а он — от
+     ширины колонки. perspective-origin в середине, иначе барабан смотрит вбок. */
+  perspective-origin: 50% 50%;
+}
+
+.home__rail:active {
+  cursor: grabbing;
+}
+
+.home__track {
+  position: absolute;
+  inset: 0;
+  /* Карточки стоят в одном 3D-пространстве: браузер сам решает, какая ближе,
+     поэтому ни z-index, ни порядок в разметке больше ничего не решают. */
+  transform-style: preserve-3d;
+}
+
+/* Карточка — плоская пластина на боку барабана. Трапеция, сжатие по вертикали
+   и наклон не нарисованы, а получаются из поворота: это одна и та же
+   перспектива, что в макете, только настоящая. */
+.slab {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 62cqw;
+  top: 50%;
+  margin-top: -31cqw;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  will-change: transform;
+  overflow: hidden;
+  background: #eaeaea;
+  text-decoration: none;
+  color: #ffffff;
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: opacity 0.25s ease;
+}
+
+.slab__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+/* ── телефон ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 899px), (max-aspect-ratio: 4/3) {
+  .home {
+    font-size: 11px;
+  }
+
+  .home__band {
+    height: 120px;
+  }
+
+  .home__meta {
+    inset: 20px 20px auto 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .home__langs {
+    padding-top: 0;
+    gap: 12px;
+  }
+
+  .home__links {
+    bottom: 20px;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .home__filters {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  /* Колонка во всю ширину: на вертикальном экране подпись внутри трапеции
+     иначе становится нечитаемо мелкой. */
+  .home__rail {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home__band-video {
+    display: none;
+  }
+}
