@@ -44,12 +44,6 @@ const dict = {
     search: 'поиск по проектам',
     searchEmpty: 'ничего не нашлось',
     casesCount: 'проектов',
-    draftTitle: 'раздел в разработке',
-    draftNote: 'мысли уже написаны — осталось их разложить. скоро',
-    searchIdeas: 'поиск по мыслям',
-    ideasCount: 'мыслей',
-    ideaRead: 'прочитать',
-    ideaHide: 'свернуть',
   },
   en: {
     name: 'makar kabanov',
@@ -84,12 +78,6 @@ const dict = {
     search: 'search projects',
     searchEmpty: 'nothing found',
     casesCount: 'projects',
-    draftTitle: 'section in progress',
-    draftNote: 'the notes are written — they just need laying out. soon',
-    searchIdeas: 'search notes',
-    ideasCount: 'notes',
-    ideaRead: 'read',
-    ideaHide: 'collapse',
   },
   sr: {
     name: 'макар кабанов',
@@ -124,12 +112,6 @@ const dict = {
     search: 'претрага пројеката',
     searchEmpty: 'ништа није нађено',
     casesCount: 'пројеката',
-    draftTitle: 'одељак у изради',
-    draftNote: 'мисли су написане — треба их још сложити. ускоро',
-    searchIdeas: 'претрага мисли',
-    ideasCount: 'мисли',
-    ideaRead: 'прочитај',
-    ideaHide: 'сажми',
   },
 };
 

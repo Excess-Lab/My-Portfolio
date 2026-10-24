@@ -4,10 +4,11 @@ import './styles/main.css';
 import './styles/about.css';
 import './styles/nav.css';
 import './styles/stage.css';
+import './styles/loading.css';
+import './components/loading-screen.js';
 import './components/hero-tear.js';
 import './components/about-screen.js';
 import './components/cases-screen.js';
-import './components/archive-screen.js';
 import './components/cursor-trail.js';
 
 const site = document.querySelector('#site');
@@ -71,7 +72,6 @@ function morphIn(screen) {
 const SCREENS = {
   about: 'about-screen',
   cases: 'cases-screen',
-  archive: 'archive-screen',
 };
 
 /**

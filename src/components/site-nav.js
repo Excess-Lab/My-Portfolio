@@ -19,7 +19,7 @@ import starIcon from '../assets/star.svg';
 export const SECTIONS = ['about', 'cases', 'archive', 'gallery', 'contacts'];
 
 // Разделы, которые уже сверстаны. Остальные показываем приглушёнными.
-export const READY = new Set(['about', 'cases', 'archive']);
+export const READY = new Set(['about', 'cases']);
 
 class SiteNav extends LitElement {
   createRenderRoot() {
